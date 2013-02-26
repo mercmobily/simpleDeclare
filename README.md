@@ -54,39 +54,39 @@ Here is a code snipset that shows 100% of its features:
 
 Node.js provides a very basic function to implement classes that inherit from others: `util.inherits()`. This is hardly enough: code often ends up looking like this:
 
-function BaseClass( options ){
-  this.options = options;
-
-  if( this.options.something ){
-    this.water = true;
-    this.fire = true;
-  }
-}
-
-BaseClass.prototype.assignA = function(a){
-  this.a = a;
-}
-
-function DerivedClass( options ){
-
-  // Call the base class' constructor
-  Baseclass.call( this, options );
-
-  if( options.fancy ){
-    this.fancy = true;
-  }
-}
-
-util.inherits( DerivedClass, BaseClass );
-
-DerivedClass.prototype.assignA = function(a){
-  Baseclass.prototype.assignA.call( this, a);
-  this.a ++;
-}
-
-DerivedClass.prototype.assignB = function(b){
-  this.b = b;
-}
+    function BaseClass( options ){
+      this.options = options;
+    
+      if( this.options.something ){
+        this.water = true;
+        this.fire = true;
+      }
+    }
+    
+    BaseClass.prototype.assignA = function(a){
+      this.a = a;
+    }
+    
+    function DerivedClass( options ){
+    
+      // Call the base class' constructor
+      Baseclass.call( this, options );
+    
+      if( options.fancy ){
+        this.fancy = true;
+      }
+    }
+    
+    util.inherits( DerivedClass, BaseClass );
+    
+    DerivedClass.prototype.assignA = function(a){
+      Baseclass.prototype.assignA.call( this, a);
+      this.a ++;
+    }
+    
+    DerivedClass.prototype.assignB = function(b){
+      this.b = b;
+    }
 
 My problems with this code:
 
