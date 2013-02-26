@@ -1,8 +1,12 @@
 
 var declare = exports.declare = function(superCtor, protoMixin) {
 
-  if( typeof( superCtor ) === 'undefined' ){
-    throw( new Error("superCtor can be null, or a constructor object. Cannot be undefined") );
+  // Initial sanity checks
+  if( typeof( superCtor ) !== 'function' && superCtor !== null ){
+    throw( new Error("Parent class (superCtor) must be either a constructor function or null") );
+  }
+  if( typeof( protoMixin) !== 'object' ){
+    throw( new Error("definition (protoMixin) must be an object") );
   }
 
   // Kidnap the `constructor` element from protoMixin, as this
