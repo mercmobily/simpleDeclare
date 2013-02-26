@@ -1,0 +1,24 @@
+{
+  "name": "simpledeclare",
+  "description": "A simple implementation of declare() to have Javascript (single) inheritance in a very elegant, dojo-style way",
+  "keywords": [
+    "javascript",
+    "inheritance",
+    "objects",
+    "declare",
+    "dojo",
+    "oop",
+  ],
+  "main" : "declare.js",
+  "version": "0.0.1",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mercmobily/simpleDeclare.git"
+  },
+  "author": {
+    "name": "Tony Mobily"
+  },
+  "dependencies": {
+  }
+}
