@@ -6,7 +6,7 @@ This is a super-simplified implementation of `declare()`, which will help you cr
 
 Here is a code snipset that shows 100% of its features:
 
-    var Baseclass = declare( null, {
+    var BaseClass = declare( null, {
 
       constructor: function( options){
         this.options = options;
@@ -70,7 +70,7 @@ Node.js provides a very basic function to implement classes that inherit from ot
     function DerivedClass( options ){
     
       // Call the base class' constructor
-      Baseclass.call( this, options );
+      BaseClass.call( this, options );
     
       if( options.fancy ){
         this.fancy = true;
@@ -80,7 +80,7 @@ Node.js provides a very basic function to implement classes that inherit from ot
     util.inherits( DerivedClass, BaseClass );
     
     DerivedClass.prototype.assignA = function(a){
-      Baseclass.prototype.assignA.call( this, a);
+      BaseClass.prototype.assignA.call( this, a);
       this.a ++;
     }
     
@@ -103,7 +103,7 @@ My problems with this code:
 The equivalent to the code above, which is also the example code provided, is:
 
 
-    var Baseclass = declare( null, {
+    var BaseClass = declare( null, {
 
       constructor: function( options){
         this.options = options;
