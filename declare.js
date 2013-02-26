@@ -1,6 +1,10 @@
 
 var declare = exports.declare = function(superCtor, protoMixin) {
 
+  if( typeof( superCtor ) === 'undefined' ){
+    throw( new Error("superCtor can be null, or a constructor object. Cannot be undefined") );
+  }
+
   // Kidnap the `constructor` element from protoMixin, as this
   // it mustn't get copied over into the prototype
   var constructor = protoMixin.constructor;
