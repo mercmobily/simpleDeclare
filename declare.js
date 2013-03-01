@@ -1,5 +1,5 @@
 
-var declare = exports.declare = function(superCtor, protoMixin) {
+var declare = function(superCtor, protoMixin) {
 
   // Initial sanity checks
   if( typeof( superCtor ) !== 'function' && superCtor !== null ){
@@ -70,6 +70,8 @@ var declare = exports.declare = function(superCtor, protoMixin) {
 
   return ctor;
 };
+
+
 exports = module.exports = declare;
 
 // Some testing...
