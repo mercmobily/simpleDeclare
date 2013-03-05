@@ -140,7 +140,6 @@ The equivalent to the code above, which is also the example code provided, is:
     });
 
 
-
-Can you see the improvement?
+Can you see the improvement? If so, you should use `simpleDeclare()`!
 
 
