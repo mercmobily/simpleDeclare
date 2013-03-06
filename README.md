@@ -21,6 +21,7 @@ Here is a code snipset that shows 100% of its features:
         this.a = a;
       },
     });
+    BaseClass.classMethod = function(){ console.log("Class method"); }
 
 
     var DerivedClass = declare( BaseClass, {
@@ -42,6 +43,7 @@ Here is a code snipset that shows 100% of its features:
 
     });
 
+    // typeof( DerivedClass.classMethod ) => function
 
 * Only single inheritance is supported. For multiple inheritance, just inherit multiple times
 
@@ -49,6 +51,7 @@ Here is a code snipset that shows 100% of its features:
 
 * You can inherit from "normal" classes not defined by `declare()`.
 
+* Class methods are copied over from the parent to the child class. Parent methods are callable via `DerivedClass._super()`.
 
 # The problem it solves
 

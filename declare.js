@@ -9,6 +9,7 @@ var declare = function(superCtor, protoMixin) {
     throw( new Error("definition (protoMixin) must be an object") );
   }
 
+
   // Kidnap the `constructor` element from protoMixin, as this
   // it mustn't get copied over into the prototype
   var constructor = protoMixin.constructor;
@@ -28,6 +29,18 @@ var declare = function(superCtor, protoMixin) {
       constructor.apply( this, arguments );
     }
   };
+
+  // Grab the class methods from the parent class, and copy them
+  // over to the newly created class.
+  // If somebody deletes one of them, and then inherits from that constructor,
+  // the child constructor won't have that method and won't be able to access
+  // the parent's parent method automatically. But still, better than nothing
+  if( superCtor !== null ){
+    Object.keys( superCtor ).forEach( function( property ) { 
+      ctor[ property ] = superCtor[ property ];      
+    });
+  }
+
 
   // The superclass can be either an empty one, or the one passed
   // as a parameter
