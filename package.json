@@ -9,8 +9,8 @@
     "dojo",
     "oop"
   ],
-  "main" : "declare.js",
-  "version": "0.1.0",
+  "main": "declare.js",
+  "version": "0.1.1",
   "private": false,
   "repository": {
     "type": "git",
@@ -19,6 +19,5 @@
   "author": {
     "name": "Tony Mobily"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
