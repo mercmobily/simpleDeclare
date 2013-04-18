@@ -13,7 +13,7 @@ var declare = function(superCtor, protoMixin) {
   // Kidnap the `constructor` element from protoMixin, as this
   // it mustn't get copied over into the prototype
   var constructor = protoMixin.constructor;
-  delete protoMixin.constructor;
+  //delete protoMixin.constructor;
 
   // The function that will work as the effective constructor. This
   // will be returned
@@ -60,7 +60,6 @@ var declare = function(superCtor, protoMixin) {
   });
 
   // Implement inherited() so that classes can run this.inherited(arguments)
-  // This will only work for sub-classes created using declare() as they are
   // the ones with super which maps the super-method
   protoMixin.inherited = function(args){
     var name, fn;
@@ -75,15 +74,82 @@ var declare = function(superCtor, protoMixin) {
 
   // Copy every element in protoMixin into the prototype.
   for( var k in protoMixin ){
-    ctor.prototype[ k ] = protoMixin[ k ];
-    if( typeof(  ctor.prototype[ k ] ) === 'function' && superCtor.prototype[k] ){
-      ctor.prototype[ k ].super = superCtor.prototype[k];
+    if( k !== 'constructor' ){
+      ctor.prototype[ k ] = protoMixin[ k ];
+      if( typeof(  ctor.prototype[ k ] ) === 'function' && superCtor.prototype[k] ){
+        ctor.prototype[ k ].super = superCtor.prototype[k];
+      }
     }
   }
 
   return ctor;
 };
 
+
+
+
+declare.mixin = function( Class, Mixin ){
+
+  if( typeof( Mixin ) !== 'object' || Mixin === null ){
+    throw( new Error("Mixin must be an object or an array") );
+  }
+
+  // It's a simple, single mixin: just return a constructor that
+  // inherits from Class and uses Mixin
+  if( ! Array.isArray( Mixin ) ){
+    return declare( Class, Mixin );
+
+  // It's an array: inherit N times, once per class
+  } else {
+
+    var ResultClass = Class;
+    for( var k in Mixin ){
+      ResultClass = declare( ResultClass, Mixin[ k ] );
+    }
+    return ResultClass;
+  }
+
+
+
+
+
+
+/*
+  var beforeMixin;
+  for( var k in Mixin ){
+
+
+    if( k !== 'constructor' ){
+
+      beforeMixin = null;
+
+      if( typeof( Class.prototype[ k ] ) === 'function' ){
+        beforeMixin = Class.prototype[ k ];
+      }
+
+      Class.prototype[ k ] = Mixin[ k ];
+
+      if( beforeMixin ){
+        Class.prototype[ k ].super = beforeMixin;
+      }
+
+    }
+  }
+
+  if( typeof( Mixin.constructor ) !== 'undefined' ){
+  
+    console.log("THERE IS A CONSTRUCTOR");
+//    var oldConstructor = Class;
+//    Class = function(){
+//      console.log("STUCAZZ");
+//    }
+//    Class.prototype.constructor = Class;
+      return declare( Class, { constructor: Mixin.constructor } ); 
+  }
+
+  return Class;
+  */  
+}
 
 exports = module.exports = declare;
 

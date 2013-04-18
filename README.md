@@ -45,7 +45,7 @@ Here is a code snipset that shows 100% of its features:
 
     // typeof( DerivedClass.classMethod ) => function
 
-* Only single inheritance is supported. For multiple inheritance, just inherit multiple times
+* Only single inheritance is supported. However, Mixins ARE supported
 
 * The function `this.inherited( arguments )` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited(arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
 
@@ -53,7 +53,37 @@ Here is a code snipset that shows 100% of its features:
 
 * Class methods are copied over from the parent to the child class. Parent methods are callable via `DerivedClass._super()`.
 
-# The problem it solves
+# Multiple inheritance
+
+Simpledeclare does NOT support multiple inheritace. However, it _does_ support "mixins".
+
+So, for example:
+
+    var Mixin1 = {
+      constructor: function(){
+        console.log(" Mixin1 constructor!");
+      },
+      c: 30
+    };
+
+     var Mixin2 = {
+      constructor: function(){
+        console.log(" Mixin2 constructor!");
+      },
+      d: 40
+    };
+
+    var SimpleMixedClass = declare.mixin( DerivedClass, Mixin1 ] ); // Mixin with Mixin1
+    var MultiMixedClass = declare.mixin( DerivedClass, [ Mixin1, Mixin2 ] ); // Mixin with both
+
+The returned class from Mixins will be a functional class "enriched" by the mixed in values. Constructors will be honoured (in the right order); you can also use `this.inherited(arguments)` in mixin objects.
+
+Note that the Mixin objects are not classes: they are simple objects.
+
+Internally, the Mixin function uses `declare()`, once for each mixed in object.
+
+
+# The problem it solves - little read for skeptics
 
 Node.js provides a very basic function to implement classes that inherit from others: `util.inherits()`. This is hardly enough: code often ends up looking like this:
 
