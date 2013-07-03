@@ -1,6 +1,6 @@
 {
   "name": "simpledeclare",
-  "description": "A simple implementation of declare() to have Javascript (single) inheritance in a very elegant, dojo-style way",
+  "description": "A simple implementation of declare() to have Javascript (single and multiple) inheritance in a very elegant, dojo-style way",
   "keywords": [
     "javascript",
     "inheritance",
@@ -10,7 +10,7 @@
     "oop"
   ],
   "main": "declare.js",
-  "version": "0.1.11",
+  "version": "0.2.0",
   "private": false,
   "repository": {
     "type": "git",
