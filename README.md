@@ -9,8 +9,8 @@ simpleDeclare supports multiple inheritance, as well as class methods.
 Here is a code snipset that shows 100% of its features:
 
 
-   // Create a BaseClass with a constructor, a method and a class method
-   var BaseClass = declare( null, {
+    // Create a BaseClass with a constructor, a method and a class method
+    var BaseClass = declare( null, {
 
       constructor: function( a ){
         this.a = a; 
