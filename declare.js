@@ -79,7 +79,6 @@ var copyClassMethods = function( Source, Dest ){
   if( Source !== null ){
     Object.keys( Source ).forEach( function( property ) {
       if( property !== 'super_'){
-        console.log("COPYING OVER: " + property );
         Dest[ property ] = Source[ property ];
       }
     });
@@ -127,228 +126,94 @@ var declare = function( SuperCtor, protoMixin ){
 
 exports = module.exports = declare;
 
-// Some testing...
 
 
-var A = declare( null, {
-  methodOne: function(p){ 
-    console.log("methodOne in A");
-    console.log(p); 
-    return 1000; 
-  },
-  methodTwo: function(p){ 
-    console.log("methodTwo in A");
-    console.log(p);
-    return 1001; 
-  },
-  methodThree: function(p){ 
-    console.log("methodThree in A");
-    console.log(p);
-    return 1002; 
-  },
-  constructor: function(a){ 
-    this.a = a; 
-    console.log("Constructor of A called");
-  },
-});
+   // Create a BaseClass with a constructor, a method and a class method
+   var BaseClass = declare( null, {
+
+      constructor: function( a ){
+        this.a = a; 
+      },
+
+      assignB: function( b ){
+        this.b = b;
+        return 1000;
+      },
+    });
+
+    BaseClass.classMethod = function(){ 
+      console.log("Class method");
+    }
 
 
-A.runMe1 = function(){
-  console.log("A's runMe1!");
-}
+    // Create a Mixin class, which redefines the constructor only
+    var Mixin = declare( null, {
+      constructor: function( a ){
+        this.a = this.a + 47;
+      },
+
+      assignB: function( b ){
+        console.log( "Running assignB within mixin..." );
+        var r = this.inherited(arguments);
+        console.log( "The inherited function returned: " + r );
+      },
+
+      assignC: function( c ){
+        this.c = c;
+      },
+
+    });
 
 
-var B = declare( A, {
-  methodOne: function( p ){
-    console.log("methodOne in B"); 
-    console.log( p );
-    var a = this.inherited(arguments);
-    console.log("In B -- Inherited function returned: " + a );
-    return a;
-  },
-  constructor: function(a){ 
-    console.log("Constructor of B called, and this.a is...");
-    console.log( this.a );
-  },
-})
+    // Create a DerivedClass derived from BaseClass. It overloads the constructor
+    // incrementing `a`
+    var DerivedClass = declare( BaseClass, {
 
-B.runMe2 = function(){
-  console.log("B's runMe2!");
-}
+      constructor: function( a ){
+        this.a ++;
+      },
 
+      assignD: function( d ){
+        this.d = d;
+      },
 
-var C = declare( B, {
-  methodTwo: function( p ){
-    console.log("methodTwo in C"); 
-    console.log( p );
-    var a = this.inherited(arguments);
-    console.log("In C -- Inherited function returned: " + a );
-  },
-  constructor: function(a){ 
-    console.log("Constructor of C called, and this.a is...");
-    console.log( this.a );
-  },
-})
+    });
 
+    // typeof( DerivedClass.classMethod ) => function
 
+    var baseObject = new BaseClass( 10 );
+    console.log( "BASE OBJECT:");
+    console.log( baseObject );
 
+    var derivedObject = new DerivedClass( 20 );
+    derivedObject.assignB( 40 );
+    console.log( "DERIVED OBJECT:");
+    console.log( derivedObject );
+    DerivedClass.classMethod();
 
-console.log("Creating a...");
-a = new A(10);
-console.log("Creating b...");
-b = new B( 20 );
-console.log("Creating c...");
-c = new C( 30 );
+    var MixedClass1 = declare( [ BaseClass, Mixin ] );
+    var mixedObject1 = new MixedClass1( 10 );
+    mixedObject1.assignB( 50 );
+    MixedClass1.classMethod();
+    console.log( "MIXED OBJECT 1 (WITH BASE):");
+    console.log( mixedObject1 );
 
-console.log( "a.a:")
-console.log( a.a );
-console.log( "b.a:")
-console.log( b.a );
-console.log( "c.a:")
-console.log( c.a );
+    var MixedClass2 = declare( [ DerivedClass, Mixin ] );
+    var mixedObject2 = new MixedClass2( 10 );
+    console.log( "MIXED OBJECT 2 (WITH DERIVED):");
+    console.log( mixedObject2 );
+    MixedClass2.classMethod();
 
+    // DON'T! MixedClass3 inherits from MixedClass2 and Baseclass, but
+    // MixedClass2 ALREADY inherits from Baseclass through DerivedClass!
+    // Never inherits twice from the same class...
+    // It's easy enough to implement a table of hashes with already inherited
+    // classes, but it wouldn't be "SIMPLEdeclare" anymore...
+    // In this example, BaseClass' constructor in invoked TWICE.
+    var MixedClass3 = declare( [ MixedClass2, BaseClass ] );
+    var mixedObject3 = new MixedClass3( 10 );
+    console.log( "MIXED OBJECT 3 (WITH TANGLED CLASSES):");
+    console.log( mixedObject3 );
+    MixedClass2.classMethod();
 
-console.log("Creating DEF.................................");
-
-
-D = declare( null, {
- methodOne: function(p){
-    console.log("methodOne in D");
-    console.log(p);
-    return 1000;
-  },
-  methodTwo: function(p){
-    console.log("methodTwo in D");
-    console.log(p);
-    return 1001;
-  },
-
-  constructor: function(a){ 
-    this.a = a; 
-    console.log("Constructor of D called");
-  },
-
-
-
-});
-D.runMe1 = function(){
-  console.log("D's runMe1!");
-}
-
-
-var E = declare( null, {
-  methodOne: function( p ){
-    console.log("methodOne in E"); 
-    console.log( p );
-    var a = this.inherited(arguments);
-    console.log("In E -- Inherited function returned: " + a );
-    return a;
-  },
-  constructor: function(a){ 
-    console.log("Constructor of E called, and this.a is...");
-    console.log( this.a );
-  },
-})
-
-E.runMe2 = function(){
-  console.log("E's runMe2!");
-}
-
-var F = declare( null, {
-  methodOne: function( p ){
-    console.log("methodOne in F"); 
-    console.log( p );
-    var a = this.inherited(arguments);
-    console.log("In F -- Inherited function returned: " + a );
-    return a;
-  },
-  constructor: function(a){ 
-    console.log("Constructor of F called, and this.a is...");
-    console.log( this.a );
-  },
-})
-
-
-var DEF = declare( [D, E, F ], {
-
- methodOne: function(p){
-  console.log("methodOne in DEF");
-  console.log( p );
-  console.log("Calling inherited() from DEF:");
-  var a = this.inherited(arguments);
-  console.log("In DEF -- Inherited function returned: " + a );
- },
-
-});
-
-var def = new DEF( 3000 );
-def.methodOne(3001 );
-console.log("INSTANCE OF:");
-console.log( def instanceof DEF );
-
-DEF.runMe1();
-DEF.runMe2();
-
-
-
-console.log( "a.methodOne(1):")
-a.methodOne(1);
-console.log( "a.methodTwo(2):")
-a.methodTwo(2);
-
-console.log( "b.methodOne(3):")
-b.methodOne(3);
-console.log( "b.methodTwo(4):")
-b.methodTwo(4);
-
-console.log( "c.methodOne(5):")
-c.methodOne(5);
-console.log( "c.methodTwo(6):")
-c.methodTwo(6);
-
-
-/*
-console.log("MIXINS................");
-
-
-var Am = { 
-  methodOne: function( p ){
-    console.log("methodOne in Am");
-    console.log( p );
-    a = this.inherited(arguments);
-    console.log("In Am -- Inherited function returned: " + a );
-  },
-  constructor: function(a){
-    console.log("Constructor of Am called, and this.a is...");
-    console.log( this.a );
-  },
-};
-*/
-
-var Attempt = declare( null, { 
-  methodOne: function( p ){
-    console.log("methodOne in Attempt");
-    console.log( p );
-    a = this.inherited(arguments);
-    console.log("In Attempt -- Inherited function returned: " + a );
-  },
-  constructor: function(a){
-    console.log("Constructor of Attempt called, and this.a is...");
-    console.log( this.a );
-  },
-});
-
-
-
-/*
-
-
-var M1 = declare.mixin( A, Am );
-
-var m1 = new M1(2000);
-m1.methodOne(1);
-
-*/
-
-
-
+    

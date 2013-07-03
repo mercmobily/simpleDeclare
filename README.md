@@ -6,50 +6,98 @@ This is a super-simplified implementation of `declare()`, which will help you cr
 simpleDeclare supports multiple inheritance, as well as class methods.
 
 
-Here is a code snipset that shows 100% of its features: ***(NOTE: missing a working example of multiple inheritance***
+Here is a code snipset that shows 100% of its features:
 
 
-    var BaseClass = declare( null, {
+   // Create a BaseClass with a constructor, a method and a class method
+   var BaseClass = declare( null, {
 
-      constructor: function( options){
-        this.options = options;
-
-        if( this.options.something ){
-          this.water = true;
-          this.fire = true;
-        }
+      constructor: function( a ){
+        this.a = a; 
       },
 
-      assignA: function(a){
-        this.a = a;
+      assignB: function( b ){
+        this.b = b;
+        return 1000;
       },
     });
-    BaseClass.classMethod = function(){ console.log("Class method"); }
+
+    BaseClass.classMethod = function(){ 
+      console.log("Class method");
+    }
 
 
+    // Create a DerivedClass derived from BaseClass. It overloads the constructor
+    // incrementing `a`. It also defines assignD()
     var DerivedClass = declare( BaseClass, {
 
-      constructor: function( options ){
-        if( options.fancy ){
-          this.fancy = true;
-        }
-      },  
-
-      assignA: function(a){
-        this.inherited( arguments );
+      constructor: function( a ){
         this.a ++;
       },
 
-      assignB: function(b){
-        this.b = b;
+      assignD: function( d ){
+        this.d = d;
       },
 
     });
 
-    // typeof( DerivedClass.classMethod ) => function
+    // Create a Mixin class, which redefines the constructor and
+    // rerefined assignB (calling the 'inherited' one)
+    var Mixin = declare( null, {
+      constructor: function( a ){
+        this.a = this.a + 47;
+      },
+
+      assignB: function( b ){
+        console.log( "Running assignB within mixin..." );
+        var r = this.inherited(arguments);
+        console.log( "The inherited function returned: " + r );
+      },
+
+      assignC: function( c ){
+        this.c = c;
+      },
+
+    });
 
 
-* The function `this.inherited( arguments )` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited(arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
+    var baseObject = new BaseClass( 10 );
+    console.log( "BASE OBJECT:");
+    console.log( baseObject );
+
+    var derivedObject = new DerivedClass( 20 );
+    derivedObject.assignB( 40 );
+    console.log( "DERIVED OBJECT:");
+    console.log( derivedObject );
+    DerivedClass.classMethod();
+
+    var MixedClass1 = declare( [ BaseClass, Mixin ] );
+    var mixedObject1 = new MixedClass1( 10 );
+    mixedObject1.assignB( 50 );
+    MixedClass1.classMethod();
+    console.log( "MIXED OBJECT 1 (WITH BASE):");
+    console.log( mixedObject1 );
+
+    var MixedClass2 = declare( [ DerivedClass, Mixin ] );
+    var mixedObject2 = new MixedClass2( 10 );
+    console.log( "MIXED OBJECT 2 (WITH DERIVED):");
+    console.log( mixedObject2 );
+    MixedClass2.classMethod();
+
+    // DON'T! MixedClass3 inherits from MixedClass2 and Baseclass, but
+    // MixedClass2 ALREADY inherits from Baseclass through DerivedClass!
+    // Never inherits twice from the same class...
+    // It's easy enough to implement a table of hashes with already inherited
+    // classes, but it wouldn't be "SIMPLEdeclare" anymore...
+    // In this example, BaseClass' constructor in invoked TWICE.
+    var MixedClass3 = declare( [ MixedClass2, BaseClass ] );
+    var mixedObject3 = new MixedClass3( 10 );
+    console.log( "MIXED OBJECT 3 (WITH TANGLED CLASSES):");
+    console.log( mixedObject3 );
+    MixedClass2.classMethod();
+
+
+* The function `this.inherited(arguments)` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited(arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
 
 * You can inherit from "normal" classes not defined by `declare()`.
 
@@ -61,38 +109,32 @@ Here is a code snipset that shows 100% of its features: ***(NOTE: missing a work
 
 Node.js provides a very basic function to implement classes that inherit from others: `util.inherits()`. This is hardly enough: code often ends up looking like this:
 
-    function BaseClass( options ){
-      this.options = options;
-    
-      if( this.options.something ){
-        this.water = true;
-        this.fire = true;
-      }
-    }
-    
-    BaseClass.prototype.assignA = function(a){
+    function BaseClass( a ){
       this.a = a;
     }
     
-    function DerivedClass( options ){
+    BaseClass.prototype.assignB = function(b){
+      this.b = b;
+    }
+    
+    function DerivedClass( a ){
     
       // Call the base class' constructor
-      BaseClass.call( this, options );
-    
-      if( options.fancy ){
-        this.fancy = true;
-      }
+      BaseClass.call( this, a );
+
+      this.a ++;   
+ 
     }
     
     util.inherits( DerivedClass, BaseClass );
     
-    DerivedClass.prototype.assignA = function(a){
-      BaseClass.prototype.assignA.call( this, a);
-      this.a ++;
+    DerivedClass.prototype.assignB = function( b ){
+      BaseClass.prototype.assignB.call( this, b);
+      this.b ++;
     }
     
-    DerivedClass.prototype.assignB = function(b){
-      this.b = b;
+    DerivedClass.prototype.assignC = function( c ){
+      this.c = c;
     }
 
 My problems with this code:
@@ -107,41 +149,38 @@ My problems with this code:
 
 * If you want to call a parent's method from a child's method, you need to do so manually. If your parent doesn't implement that method, but the parent's parents do, you are out of luck.
 
+* Multiple inheritance is... well, forget it.
+
+* Mixin classes are... well, forget them.
+
 The equivalent to the code above, which is also the example code provided, is:
 
 
     var BaseClass = declare( null, {
 
-      constructor: function( options){
-        this.options = options;
-
-        if( this.options.something ){
-          this.water = true;
-          this.fire = true;
-        }
+      constructor: function( a ){
+        this.a = a;
       },
 
-      assignA: function(a){
-        this.a = a;
+      assignB: function( b ){
+        this.b = b;
       },
     });
 
 
     var DerivedClass = declare( BaseClass, {
 
-      constructor: function( options ){
-        if( options.fancy ){
-          this.fancy = true;
-        }
+      constructor: function( a ){
+        this.a ++;
       },  
 
-      assignA: function(a){
+      assignB: function( b ){
         this.inherited( arguments );
-        this.a ++;
+        this.b ++;
       },
 
-      assignB: function(b){
-        this.b = b;
+      assignC: function( c ){
+        this.c = c;
       },
 
     });
