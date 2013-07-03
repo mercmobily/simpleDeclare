@@ -126,10 +126,10 @@ var declare = function( SuperCtor, protoMixin ){
 
 exports = module.exports = declare;
 
+/*
 
-
-   // Create a BaseClass with a constructor, a method and a class method
-   var BaseClass = declare( null, {
+    // Create a BaseClass with a constructor, a method and a class method
+    var BaseClass = declare( null, {
 
       constructor: function( a ){
         this.a = a; 
@@ -146,7 +146,22 @@ exports = module.exports = declare;
     }
 
 
-    // Create a Mixin class, which redefines the constructor only
+    // Create a DerivedClass derived from BaseClass. It overloads the constructor
+    // incrementing `a`. It also defines assignD()
+    var DerivedClass = declare( BaseClass, {
+
+      constructor: function( a ){
+        this.a ++;
+      },
+
+      assignD: function( d ){
+        this.d = d;
+      },
+
+    });
+
+    // Create a Mixin class, which redefines the constructor and
+    // rerefined assignB (calling the 'inherited' one)
     var Mixin = declare( null, {
       constructor: function( a ){
         this.a = this.a + 47;
@@ -164,22 +179,6 @@ exports = module.exports = declare;
 
     });
 
-
-    // Create a DerivedClass derived from BaseClass. It overloads the constructor
-    // incrementing `a`
-    var DerivedClass = declare( BaseClass, {
-
-      constructor: function( a ){
-        this.a ++;
-      },
-
-      assignD: function( d ){
-        this.d = d;
-      },
-
-    });
-
-    // typeof( DerivedClass.classMethod ) => function
 
     var baseObject = new BaseClass( 10 );
     console.log( "BASE OBJECT:");
@@ -216,4 +215,4 @@ exports = module.exports = declare;
     console.log( mixedObject3 );
     MixedClass2.classMethod();
 
-    
+*/
