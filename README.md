@@ -6,7 +6,8 @@ This is a super-simplified implementation of `declare()`, which will help you cr
 simpleDeclare supports multiple inheritance, as well as class methods.
 
 
-Here is a code snipset that shows 100% of its features:
+Here is a code snipset that shows 100% of its features: ***(NOTE: missing a working example of multiple inheritance***
+
 
     var BaseClass = declare( null, {
 
