@@ -50,7 +50,8 @@ Here is a code snipset that shows 100% of its features:
 
       assignB: function( b ){
         console.log( "Running assignB within mixin..." );
-        var r = this.inherited(arguments);
+        // In order to be "use strict"; safe, we need to pass the name of the method over to `this.inherited()`
+        var r = this.inherited( 'assignB', arguments);
         console.log( "The inherited function returned: " + r );
       },
 
@@ -97,7 +98,7 @@ Here is a code snipset that shows 100% of its features:
     MixedClass2.classMethod();
 
 
-* The function `this.inherited(arguments)` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited(arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
+* The function `this.inherited( 'assignB', arguments )` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited( 'assignB', arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
 
 * You can inherit from "normal" classes not defined by `declare()`.
 
@@ -122,8 +123,7 @@ Node.js provides a very basic function to implement classes that inherit from ot
       // Call the base class' constructor
       BaseClass.call( this, a );
 
-      this.a ++;   
- 
+      this.a ++; 
     }
     
     util.inherits( DerivedClass, BaseClass );
@@ -175,7 +175,7 @@ The equivalent to the code above, which is also the example code provided, is:
       },  
 
       assignB: function( b ){
-        this.inherited( arguments );
+        this.inherited( 'assignB', arguments );
         this.b ++;
       },
 
@@ -194,7 +194,7 @@ Can you see the improvement? If so, you should use `simpleDeclare()`!
 Limitations won't be a problem if you keep things simple and don't mess with prototypes. Specifically:
 
   * If you change a method in a constructor's prototype, the `super` attribute of that method will be lost,
-    and this.inherited(arguments) will no longer work
+    and this.inherited( 'methodName', arguments) will no longer work
 
   * If you inherit from a class multiple times, well, the class will be inherited several times (no dupe
     checking)

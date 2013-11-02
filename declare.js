@@ -1,3 +1,4 @@
+"use strict";
 /*
 Copyright (C) 2013 Tony Mobily
 
@@ -8,7 +9,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-var singleDeclare = function(SuperCtor, protoMixin) {
+var singleDeclare = function( SuperCtor, protoMixin ) {
 
   if( typeof( protoMixin ) === 'undefined' ) protoMixin = {};
 
@@ -59,34 +60,33 @@ var singleDeclare = function(SuperCtor, protoMixin) {
 
   // Implement inherited() so that classes can run this.inherited(arguments)
   // the ones with super which maps the super-method
-  protoMixin.inherited = function(args){
-    var name, fn;
+  protoMixin.inherited = function( name, args ){
 
-      fn = args.callee.super;
-      if( fn ){
-        return fn.apply( this, args );
-      } else {
-        throw( new Error("Method " + name + "() not inherited!") );
-      }
-  }
+    //fn = args.callee.super;
+    var fn = this.__proto__[ name ].super;
+
+    if( fn ){
+      return fn.apply( this, args );
+    } else {
+      throw( new Error("Method " + name + "() not inherited!") );
+    }
+
+
+  },
 
   
-  // PROVISIONAL, to be tested and documented
-  protoMixin.inheritedAsync = function(args, cb ){
-    var name, fn;
+  protoMixin.inheritedAsync = function( name, args, cb ){
     var argsMinusCallback;
 
-      fn = args.callee.super;
-      if( fn ){
-        argsMinusCallback = Array.prototype.slice.call(args, 0, -1 ).concat( cb )
+    var fn = this.__proto__[ name ].super;
+    if( fn ){
+      argsMinusCallback = Array.prototype.slice.call(args, 0, -1 ).concat( cb )
 
-        return fn.apply( this, argsMinusCallback );
-      } else {
-        throw( new Error("Method " + name + "() not inherited!") );
-      }
+      return fn.apply( this, argsMinusCallback );
+    } else {
+      throw( new Error("Method " + name + "() not inherited!") );
+    }
   }
-
-
 
 
   // Copy every element in protoMixin into the prototype.
@@ -155,7 +155,6 @@ var declare = function( SuperCtor, protoMixin ){
 
 exports = module.exports = declare;
 
-/*
 
     // Create a BaseClass with a constructor, a method and a class method
     var BaseClass = declare( null, {
@@ -198,7 +197,7 @@ exports = module.exports = declare;
 
       assignB: function( b ){
         console.log( "Running assignB within mixin..." );
-        var r = this.inherited(arguments);
+        var r = this.inherited('assignB', arguments);
         console.log( "The inherited function returned: " + r );
       },
 
@@ -244,4 +243,3 @@ exports = module.exports = declare;
     console.log( mixedObject3 );
     MixedClass2.classMethod();
 
-*/
