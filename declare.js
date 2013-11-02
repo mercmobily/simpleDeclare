@@ -155,6 +155,7 @@ var declare = function( SuperCtor, protoMixin ){
 
 exports = module.exports = declare;
 
+/*
 
     // Create a BaseClass with a constructor, a method and a class method
     var BaseClass = declare( null, {
@@ -243,3 +244,4 @@ exports = module.exports = declare;
     console.log( mixedObject3 );
     MixedClass2.classMethod();
 
+*/
