@@ -1,4 +1,5 @@
 "use strict";
+
 /*
 Copyright (C) 2013 Tony Mobily
 
@@ -70,8 +71,6 @@ var singleDeclare = function( SuperCtor, protoMixin ) {
     } else {
       throw( new Error("Method " + name + "() not inherited!") );
     }
-
-
   },
 
   
@@ -87,7 +86,6 @@ var singleDeclare = function( SuperCtor, protoMixin ) {
       throw( new Error("Method " + name + "() not inherited!") );
     }
   }
-
 
   // Copy every element in protoMixin into the prototype.
   for( var k in protoMixin ){
@@ -155,93 +153,3 @@ var declare = function( SuperCtor, protoMixin ){
 
 exports = module.exports = declare;
 
-/*
-
-    // Create a BaseClass with a constructor, a method and a class method
-    var BaseClass = declare( null, {
-
-      constructor: function( a ){
-        this.a = a; 
-      },
-
-      assignB: function( b ){
-        this.b = b;
-        return 1000;
-      },
-    });
-
-    BaseClass.classMethod = function(){ 
-      console.log("Class method");
-    }
-
-
-    // Create a DerivedClass derived from BaseClass. It overloads the constructor
-    // incrementing `a`. It also defines assignD()
-    var DerivedClass = declare( BaseClass, {
-
-      constructor: function( a ){
-        this.a ++;
-      },
-
-      assignD: function( d ){
-        this.d = d;
-      },
-
-    });
-
-    // Create a Mixin class, which redefines the constructor and
-    // rerefined assignB (calling the 'inherited' one)
-    var Mixin = declare( null, {
-      constructor: function( a ){
-        this.a = this.a + 47;
-      },
-
-      assignB: function( b ){
-        console.log( "Running assignB within mixin..." );
-        var r = this.inherited('assignB', arguments);
-        console.log( "The inherited function returned: " + r );
-      },
-
-      assignC: function( c ){
-        this.c = c;
-      },
-
-    });
-
-
-    var baseObject = new BaseClass( 10 );
-    console.log( "BASE OBJECT:");
-    console.log( baseObject );
-
-    var derivedObject = new DerivedClass( 20 );
-    derivedObject.assignB( 40 );
-    console.log( "DERIVED OBJECT:");
-    console.log( derivedObject );
-    DerivedClass.classMethod();
-
-    var MixedClass1 = declare( [ BaseClass, Mixin ] );
-    var mixedObject1 = new MixedClass1( 10 );
-    mixedObject1.assignB( 50 );
-    MixedClass1.classMethod();
-    console.log( "MIXED OBJECT 1 (WITH BASE):");
-    console.log( mixedObject1 );
-
-    var MixedClass2 = declare( [ DerivedClass, Mixin ] );
-    var mixedObject2 = new MixedClass2( 10 );
-    console.log( "MIXED OBJECT 2 (WITH DERIVED):");
-    console.log( mixedObject2 );
-    MixedClass2.classMethod();
-
-    // DON'T! MixedClass3 inherits from MixedClass2 and Baseclass, but
-    // MixedClass2 ALREADY inherits from Baseclass through DerivedClass!
-    // Never inherits twice from the same class...
-    // It's easy enough to implement a table of hashes with already inherited
-    // classes, but it wouldn't be "SIMPLEdeclare" anymore...
-    // In this example, BaseClass' constructor in invoked TWICE.
-    var MixedClass3 = declare( [ MixedClass2, BaseClass ] );
-    var mixedObject3 = new MixedClass3( 10 );
-    console.log( "MIXED OBJECT 3 (WITH TANGLED CLASSES):");
-    console.log( mixedObject3 );
-    MixedClass2.classMethod();
-
-*/
