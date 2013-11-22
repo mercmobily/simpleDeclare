@@ -108,6 +108,7 @@ var tests = {
     test.done();
   },
 
+
   "derived class inheriting class method": function( test ){
     var self = this;
 
@@ -145,6 +146,63 @@ var tests = {
 
     test.done();
   },
+
+  "derived class, isInherited": function( test ){
+    var self = this;
+
+    var DerivedClass = declare( BaseClass, {
+
+      assignA: function(){
+        this.inherited( arguments );
+      },
+
+      newOne: function(){
+      },
+
+      inheritedTest1: function( a ){
+        this.inherited( 'assignA', arguments );
+        return this.isInherited( 'assignA' );
+      },
+      inheritedTest2: function( a ){
+        return this.isInherited( 'newone' );
+      },
+      inheritedTest3: function( a ){
+        return this.inherited( 'newOne' );
+      },
+    });
+
+    var derivedObject = new DerivedClass( 10 );
+    test.equal( derivedObject.inheritedTest1(), true ); 
+    test.equal( derivedObject.inheritedTest2(), false ); 
+    test.throws( function(){ derivedObject.inheritedTest3() }  ); 
+
+    test.done();
+  },
+
+  "derived class, broken chain": function( test ){
+    var self = this;
+
+    var DerivedClass1 = declare( BaseClass, {
+
+      assignZ: function( z ){
+        this.z = z;
+      },
+    });
+
+    var DerivedClass2 = declare( DerivedClass1, {
+
+      assignA: function( a ){
+        this.inherited( 'assignA', [ a + 1 ] );
+      },
+    });
+
+    var derivedObject2 = new DerivedClass2( 10 );
+    derivedObject2.assignA( 1000 );
+    test.equal( derivedObject2.a, 1001 );
+
+    test.done();
+  },
+
 
   "async inherited method": function( test ){
     var self = this;
