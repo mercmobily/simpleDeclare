@@ -30,6 +30,8 @@ Here is how you create a simple class/constructor function, with:
 * Another method called `asyncMethod()` that expects a callback as its last parameter, and will call it.
 * A "class method" call `classMethod()`
 
+Code:
+
     // Create a BaseClass with a constructor, a method and a class method
     var BaseClass = declare( null, {
 
@@ -87,6 +89,8 @@ Here is the code for a class with:
 * A redefined `assignA()` method, using `this.inherited()` to call the "original" `assignA` method. Note that in this example, it just prints out the original return value, and returns 2000.
 * A new async method, called `asyncMethod()`, that will use `this.inheritedAsync()` to call `BaseClass`' original one
 * `BaseClass`' class methods are copied over to `DerivedClass`. So, `classMethod()` is available in `DerivedClass` even though it was only defined in `BaseClass`. 
+
+Code:
 
     // Create a DerivedClass derived from BaseClass. It overloads the constructor
     // incrementing `a`. It also defines assignD()
@@ -175,6 +179,8 @@ Note how in order to mix in the `Mixin` class to `DerivedCass`, `declare()` is p
 
 Also, note how simpledeclare doesn't check if a class has already been mixed in/inherited. So, you need to be careful not to inherit twice from the same class. The last bit of code in this example shows exactly what I mean.
 
+Code:
+
     // Create a Mixin class: a class that doesn't inherit from anything,
     // and just adds/redefines methods of the original class. Great for drivers!
 
@@ -251,6 +257,8 @@ Multiple inheritance is possible with simpledeclare but...
 
 ...but do use Mixins instead.
 
+Code:
+
     // Create a BaseClass with a constructor, a method and a class method
     var BaseClass2 = declare( null, {
 
@@ -299,10 +307,6 @@ Multiple inheritance is possible with simpledeclare but...
     console.log( multipleObject );
 		MultipleClass.classMethod();
     MultipleClass.classMethod2();
-
- 
-
- 
 
 # The problem it solves - little read for skeptics
 
