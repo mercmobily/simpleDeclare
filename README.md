@@ -287,7 +287,7 @@ Code:
       },
 
       assignAandZ: function( a, z ){
-				this.assignA( a );
+        this.assignA( a );
         this.assignZ( z );
       },
 
@@ -305,7 +305,7 @@ Code:
     multipleObject.assignAandZ( 80, 100 );
     console.log( "DERIVED OBJECT after assignAandZ:");
     console.log( multipleObject );
-		MultipleClass.classMethod();
+    MultipleClass.classMethod();
     MultipleClass.classMethod2();
 
 # The problem it solves - little read for skeptics
