@@ -59,11 +59,23 @@ var singleDeclare = function( SuperCtor, protoMixin ) {
     }
   });
 
+  protoMixin.isInherited = function( name ){
+
+    if( ! this.__proto__[ name ] ) return false;
+    return !! this.__proto__[ name ].super;
+  };
+
+
   // Implement inherited() so that classes can run this.inherited(arguments)
   // the ones with super which maps the super-method
   protoMixin.inherited = function( name, args ){
 
     //fn = args.callee.super;
+
+    if( ! this.__proto__[ name ] ){
+      throw( new Error("Method " + name + "() not defined in current class") );
+    }
+
     var fn = this.__proto__[ name ].super;
 
     if( fn ){
