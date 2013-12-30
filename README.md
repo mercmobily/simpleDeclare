@@ -86,7 +86,7 @@ Here is the code for a class with:
 
 * The `BaseClass` class/constructor function as its "base class".
 * A new constructor method. Note that _both_ the `BaseClass` and the `DerivedClass` constructors will be called, in the right order, when you use `DerivedClass` as a constructor. In this particular case, `this.a` is changed by `DerivedClass`' constructor.
-* A redefined `assignA()` method, using `this.inherited()` to call the "original" `assignA` method. Note that in this example, it just prints out the original return value, and returns 2000.
+* A redefined `assignA()` method, using `this.inherited()` to call the "original" `assignA` method. Note that in this example, it just prints out the original return value, and returns 2000. Also note that you need to use named functions for methods that called `this.inherited()`, and pass a reference to the function as the first arguments to `this.inherited`.
 * A new async method, called `asyncMethod()`, that will use `this.inheritedAsync()` to call `BaseClass`' original one
 * `BaseClass`' class methods are copied over to `DerivedClass`. So, `classMethod()` is available in `DerivedClass` even though it was only defined in `BaseClass`. 
 
@@ -104,11 +104,11 @@ Code:
         this.a ++;
       },
 
-     assignA: function( p ){
+     assignA: function assignA( p ){
 
         // Call the original `assignA` method.
-        var r = this.inherited( 'assignA', arguments);
-        console.log( "The inherited assignB() method returned: " + r );
+        var r = this.inherited( assignA, arguments);
+        console.log( "The inherited assignA() method returned: " + r );
 
         // Return something completely different
         return 20000;
@@ -121,8 +121,8 @@ Code:
 
       // Redefine BaseClass' `asyncMethod()` so that it considers `p1` twice
       // in the sum. To call the inherited async method, it uses `this.inheritedAsync()`
-      asyncMethod: function( p1, p2, done ){
-        this.inheritedAsync( 'asyncMethod', arguments, function( err, res ){
+      asyncMethod: function asyncMethod( p1, p2, done ){
+        this.inheritedAsync( asyncMethod, arguments, function( err, res ){
 
           // Modifying what is returned by the original async method
           done( null, res + p1 );
@@ -162,7 +162,7 @@ Code:
     });
 
 
-A little mental puzzle about `this.inherited()`: The function `this.inherited( 'assignA', arguments )` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited( 'assignB', arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
+A little mental puzzle about `this.inherited()`: The function `this.inherited( assignA, arguments )` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited( m, arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
 
 ### Create a new mixin class/constructor function
 
@@ -172,7 +172,6 @@ Here is a mixin that:
 
 * Once again defines a constructor that will change the value of `this.a`
 * Redefines the `assignB()` method, using `this.inherited()` to call the "original" `assignB` method. Note that in this example it actually calls the original method passing a different parameter. So, `this.b` will be initialised to something different than the original method intended. This is what you get for "mixing in" with the wrong crowd!
-* Since this is a "mixin" and it doesn't know in advance what it will be mixed with, before doing `this.inherited()` it will need to check whether a method with that name was indeed inherited. To do that, it uses the `this.isInherited()` function
 * Defines a new `assignC()` method that defines `this.c`
 
 Note how in order to mix in the `Mixin` class to `DerivedCass`, `declare()` is passed an array. When you do that, classes are "mixed in" together. It's important that you code Mixin properly: when you write a Mixin, you cannot actualy be sure what the class is inheriting from. See mixins as ways to extend existing classes in a generic way, or change the behaviour of specific methods in a class.
@@ -194,19 +193,14 @@ Code:
       },
 
       // Redefine the assignB method
-      assignB: function( p ){
+      assignB: function assignB( p ){
 
         console.log( "Running assignB within mixin..." );
 
         // Call the original `assignB` method. Note that the original
         // `assignB()` method will be called with a different parameter
-        if( this.isInherited( 'assignB' ) ){
-          var r = this.inherited( 'assignB', [ p + 1 ] );
-          console.log( "The inherited assignB() method returned: " + r );
-        } else {
-          console.log( "assignB() wasn't inherited by this mixin!" );
-          this.b = p + 1;
-        }
+        var r = this.inherited( assignB, [ p + 1 ] );
+        console.log( "The inherited assignB() method returned: " + r );
 
         // Return something completely different
         return 20000;
@@ -370,8 +364,8 @@ The equivalent to the code above, which is also the example code provided, is:
         this.a ++;
       },  
 
-      assignB: function( p ){
-        this.inherited( 'assignB', arguments );
+      assignB: function assignB( p ){
+        this.inherited( assignB, arguments );
         this.b ++;
       },
 
@@ -389,7 +383,7 @@ Can you see the improvement? If so, you should use `simpleDeclare()`!
 
 Limitations won't be a problem if you keep things simple and don't mess with prototypes. Specifically:
 
-  * If you change a method in a constructor's prototype, the `super` attribute of that method will be lost, and `this.inherited( 'methodName', arguments)` will no longer work.
+  * If you change a method in a constructor's prototype, the `super` attribute of that method will be lost, and `this.inherited( methodReference, arguments)` will no longer work.
   * If you inherit from a class multiple times, well, the class will be inherited several times (no dupe checking). This affects constructors (which will be called several times), inherited methods, etc. Basically, don't inherit twice from the same class.
 
 

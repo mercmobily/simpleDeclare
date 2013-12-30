@@ -1,5 +1,4 @@
 "use strict";
-
 /*
 Copyright (C) 2013 Tony Mobily
 
@@ -59,43 +58,40 @@ var singleDeclare = function( SuperCtor, protoMixin ) {
     }
   });
 
-  protoMixin.isInherited = function( name ){
+  /*
+  protoMixin.isInherited = function(  ){
 
     if( ! this.__proto__[ name ] ) return false;
     return !! this.__proto__[ name ].super;
   };
+  */
 
 
   // Implement inherited() so that classes can run this.inherited(arguments)
   // the ones with super which maps the super-method
-  protoMixin.inherited = function( name, args ){
+  protoMixin.inherited = function( method, args ){
 
-    //fn = args.callee.super;
-
-    if( ! this.__proto__[ name ] ){
-      throw( new Error("Method " + name + "() not defined in current class") );
-    }
-
-    var fn = this.__proto__[ name ].super;
-
+    //var fn = this.__proto__[ name ].super;
+    var fn = method.super;
     if( fn ){
       return fn.apply( this, args );
     } else {
-      throw( new Error("Method " + name + "() not inherited!") );
+      return;
+      //throw( new Error("Method  not inherited!") );
     }
   },
 
   
-  protoMixin.inheritedAsync = function( name, args, cb ){
+  protoMixin.inheritedAsync = function( method, args, cb ){
     var argsMinusCallback;
 
-    var fn = this.__proto__[ name ].super;
+    var fn = method.super;
     if( fn ){
       argsMinusCallback = Array.prototype.slice.call(args, 0, -1 ).concat( cb )
 
       return fn.apply( this, argsMinusCallback );
     } else {
-      throw( new Error("Method " + name + "() not inherited!") );
+      return cb.apply( this );
     }
   }
 
@@ -165,3 +161,42 @@ var declare = function( SuperCtor, protoMixin ){
 
 exports = module.exports = declare;
 
+/*
+var A = declare( null, {
+
+  m: function m( cb ){
+    console.log("A > M");
+    this.inheritedAsync( m, arguments, function(){
+      cb( null );
+    });
+  }
+});
+
+var B = declare( null, {
+
+  m1: function m( cb ){
+    console.log("B > M");
+    this.inheritedAsync( m, arguments, function(){
+      cb( null );
+    });
+  }
+});
+
+var C = declare( null, {
+
+  m: function m( cb ){
+    console.log("C > M");
+    this.inheritedAsync( m, arguments, function(){
+      cb( null );
+    });
+  }
+});
+
+
+var ABC = declare([A,B,C]);
+
+var abc = new ABC();
+abc.m( function(){
+  console.log("All finished");
+});
+*/
