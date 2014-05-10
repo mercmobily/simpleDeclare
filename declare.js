@@ -95,6 +95,11 @@ var singleDeclare = function( SuperCtor, protoMixin ) {
     }
   }
 
+  // Redefine a method making sure that this.inherited will still work
+  protoMixin.redefineMethod = function( methodName, newMethod ){
+    declare.redefineMethod( this, methodName, newMethod );
+  }
+
   // Copy every element in protoMixin into the prototype.
   for( var k in protoMixin ){
     if( k !== 'constructor' ){
@@ -143,7 +148,7 @@ var declare = function( SuperCtor, protoMixin ){
 
     // Finally, inherit from the MixedClass, and add
     // class methods over
-    ResultClass = singleDeclare( MixedClass, protoMixin );
+    var ResultClass = singleDeclare( MixedClass, protoMixin );
     copyClassMethods( MixedClass, ResultClass );
 
     return ResultClass;
@@ -158,6 +163,15 @@ var declare = function( SuperCtor, protoMixin ){
   }
 
 };
+
+// Redefine a method making sure that this.inherited will still work
+declare.redefineMethod = function( object, methodName, newMethod ){
+  var originalMethod = object[ methodName ];
+  object[ methodName ] = newMethod;
+  object[ methodName ].super = originalMethod;
+}
+
+
 
 exports = module.exports = declare;
 
