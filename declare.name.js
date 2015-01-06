@@ -49,8 +49,7 @@ BaseConstructor.prototype = {
     var p = Object.getPrototypeOf( this );
 
     // Get the right key for the superMap
-    //var fn = typeof( p.superMap ) === 'object' && p.superMap[ method ]; 
-    var fn = Object.getPrototypeOf( p )[ method ];
+    var fn = typeof( p.superMap ) === 'object' && p.superMap[ method ]; 
 
     if( fn ){
       return fn.apply( p, args );
@@ -67,9 +66,7 @@ BaseConstructor.prototype = {
     var p = Object.getPrototypeOf( this );
 
     // Get the right key for the superMap
-    //var fn = typeof( p.superMap ) === 'object' && p.superMap[ method ]; 
-
-    var fn = Object.getPrototypeOf( p )[ method ];
+    var fn = typeof( p.superMap ) === 'object' && p.superMap[ method ]; 
 
     if( fn ){
       argsMinusCallback = Array.prototype.slice.call(args, 0, -1 ).concat( cb )
@@ -82,9 +79,9 @@ BaseConstructor.prototype = {
   },
 
   // Redefine a method making sure that this.inherited will still work
-  //redefineMethod: function( methodName, newMethod ){
-  //  declare.redefineMethod( this, methodName, newMethod );
-  //},
+  redefineMethod: function( methodName, newMethod ){
+    declare.redefineMethod( this, methodName, newMethod );
+  },
 
 };
 
@@ -123,19 +120,21 @@ var makeConstructor = function( FromCtor, protoMixin ) {
       configurable: true
     }
   });
-  //ReturnedCtor.prototype.superMap = {};
+  ReturnedCtor.prototype.superMap = {};
 
   // Copy every element in protoMixin into the prototype.
   // Skips the methods "meaningful" to simpledeclare
+  // (Copying superMap would be catatrophic since every object would end up with the same copy of superMap)
   for( var k in protoMixin ){
-    if( [ 'constructor', 'inherited', 'inheritedAsync', 'redefineMethod' ].indexOf( k ) === -1 ){
+    if( [ 'superMap', 'constructor', 'inherited', 'inheritedAsync', 'redefineMethod' ].indexOf( k ) === -1 ){
       ReturnedCtor.prototype[ k ] = protoMixin[ k ];
 
       // Adds a reference to method.super() if FromCtor has it in its prototype
-      //if( typeof( protoMixin[ k ] ) === 'function' && FromCtor.prototype[k] ){
-      //  //ReturnedCtor.prototype.superMap[ protoMixin[ k ] ] = FromCtor.prototype[k];
-      //  ReturnedCtor.prototype.superMap[ k ] = FromCtor.prototype[k];
-      //}
+      if( typeof( protoMixin[ k ] ) === 'function' && FromCtor.prototype[k] ){
+        //ReturnedCtor.prototype.superMap[ protoMixin[ k ] ] = FromCtor.prototype[k];
+        ReturnedCtor.prototype.superMap[ k ] = FromCtor.prototype[k];
+
+      }
     }
   }
   return ReturnedCtor;
@@ -146,7 +145,7 @@ var copyClassMethods = function( Source, Dest ){
  // Copy class methods over
   if( Source !== null ){
     Object.keys( Source ).forEach( function( property ) {
-      if( property !== 'super' ){ // && property !== 'superMap' ){
+      if( property !== 'super' && property !== 'superMap' ){
         Dest[ property ] = Source[ property ];
       }
     });
@@ -191,7 +190,6 @@ var declare = function( SuperCtor, protoMixin ){
 
 declare.declarableObject = declare( null );
 
-/*
 // Redefine a method making sure that this.inherited will still work
 declare.redefineMethod = function( object, methodName, newMethod ){
   var originalMethod = object[ methodName ];
@@ -203,7 +201,7 @@ declare.redefineMethod = function( object, methodName, newMethod ){
   var oldSuper = p.superMap[ methodName ];
   p.superMap[ methodName ] = oldSuper;
 }
-*/
+
 
 exports = module.exports = declare;
 
@@ -301,14 +299,14 @@ b1.m( 'pippo', function( err, result ){
     console.log("RUNNING d1.m...");
     var d1 = new D1();
 
-    d1.m = function( parameter, cb ){
+    d1.redefineMethod( 'm', function m( parameter, cb ){
       console.log("REDEFINED D1 > m");
       this.inheritedAsync( 'm', arguments, function(){
        console.log("REDEFINED ARGUMENTS RETURNED BY INHEDITEDASYNC (in D1 REDEFINED): ", arguments );
 
         cb( null, "Returned by D1 REDEFINED ");
       });
-    };
+    });
 
 
 
