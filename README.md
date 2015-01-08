@@ -1,15 +1,16 @@
 simpleDeclare
 =============
 
-This is a Dojo-inspired implementation of `declare()`, which will help you create Javascript classes^H^H^H^H^H^Hconstructor functions while keeping you code clean and neat.
+SimpleDeclare is a very simple and yet powerful library to create Javascript classes^H^H^H^H^H^Hconstructor functions while keeping you code clean and neat.
+Features:
 
-simpleDeclare in short supports:
-
-* multiple inheritance; this allows the creation of "Mixin" classes;
-* definition of constractor functions (they will be called automatically, in the right order);
-* ability to call inherited methods within a method (async and normal ones);
-* inheriting from "normal" Javascript constructor functions/classes;
-* inheritance of class-wide methods.
+* Multiple inheritance; this allows the creation of "Mixin" classes;
+* Constructors will be called automatically, in the right order (oldest to newest)
+* `this.inherited()` to call the super method
+* `this.inheritedAsync()` to call the super method in async fashion (very useful when the method is a node-style callback)
+* The this.inherited() functions will work without meta-data (although meta-data in the prototype will make them faster)
+* Inheriting from "normal" Javascript constructor functions/classes will work
+* Inheritance of class-wide methods. If you define a `Person`, define `Person.something()` and inherit `Worker` from `Person`, you will also get `Worker.something()`
 
 The class is fully unit-tested and it's being used in [Hotplate](https://github.com/mercmobily/hotplate) as most of Hotplate's foundation modules.
 
@@ -28,23 +29,25 @@ Here is how you create a simple class/constructor function, with:
 * A working `constructor()` that initialises `this.a`
 * A method called `assignA()` that will assign `this.a` and return `1000`
 * Another method called `asyncMethod()` that expects a callback as its last parameter, and will call it.
-* A "class method" call `classMethod()`
+* A "class method" called `classMethod()`
 
 Code:
 
-    // Create a BaseClass with a constructor, a method and a class method
+
+````javascript
     var BaseClass = declare( null, {
 
       // Define the constructor, will initialise `a`
-      constructor: function( p ){
+      constructor: function( param ){
 
         console.log("BaseClass' constructor run");
-        this.a = p; 
+        this.a = param; 
       },
 
       // Define a simple method, that will assign `b` and return 1000
-      assignA: function( p ){
-        this.a = p;
+      assignA: function( a ){
+        console.log("AssignA run:", a );
+        this.a = a;
         return 1000;
       },
 
@@ -67,6 +70,13 @@ Code:
 
     console.log("\nCreating baseObject:");
     var baseObject = new BaseClass( 10 );
+    
+    console.log( "BASE OBJECT:");
+    console.log( baseObject );
+
+    var r = baseObject.assignA( 30 );
+    console.log("baseObject.assignA returned:", r );
+
     console.log( "BASE OBJECT:");
     console.log( baseObject );
 
@@ -76,21 +86,24 @@ Code:
       // Running classMethod()
       BaseClass.classMethod();
     });
+````
 
+The first parameter of `declare()` is `null`, which means that the class won't be inherited from anything.
 
-### Create a new class/constructor function with inheritance
+### Inheritance
 
 You can obviously create classes/constructor functions based on other ones.
 
-Here is the code for a class with:
+Here is the code for a constructor class with:
 
 * The `BaseClass` class/constructor function as its "base class".
 * A new constructor method. Note that _both_ the `BaseClass` and the `DerivedClass` constructors will be called, in the right order, when you use `DerivedClass` as a constructor. In this particular case, `this.a` is changed by `DerivedClass`' constructor.
-* A redefined `assignA()` method, using `this.inherited()` to call the "original" `assignA` method. Note that in this example, it just prints out the original return value, and returns 2000. Also note that you need to use named functions for methods that called `this.inherited()`, and pass a reference to the function as the first arguments to `this.inherited`.
+* A redefined `assignA()` method, using `this.inherited()` to call the "original" `assignA` method. Note that in this example, it just prints out the original return value, and returns 2000. Also note that you need to pass the method's name to `this.inherited()`
 * A new async method, called `asyncMethod()`, that will use `this.inheritedAsync()` to call `BaseClass`' original one
 * `BaseClass`' class methods are copied over to `DerivedClass`. So, `classMethod()` is available in `DerivedClass` even though it was only defined in `BaseClass`. 
 
 Code:
+
 
     // Create a DerivedClass derived from BaseClass. It overloads the constructor
     // incrementing `a`. It also defines assignD()
@@ -104,28 +117,31 @@ Code:
         this.a ++;
       },
 
-     assignA: function assignA( p ){
+     assignA: function assignA( a ){
 
         // Call the original `assignA` method.
-        var r = this.inherited( assignA, arguments);
+        var r = this.inherited(arguments);
         console.log( "The inherited assignA() method returned: " + r );
 
         // Return something completely different
         return 20000;
      },
 
-      // Define a new method to define `b`
-      assignB: function( p ){
-        this.b = p;
+      // Define a new method to define `this.b`
+      assignB: function( b ){
+        this.b = b;
       },
 
       // Redefine BaseClass' `asyncMethod()` so that it considers `p1` twice
       // in the sum. To call the inherited async method, it uses `this.inheritedAsync()`
-      asyncMethod: function asyncMethod( p1, p2, done ){
-        this.inheritedAsync( asyncMethod, arguments, function( err, res ){
+      asyncMethod: function( p1, p2, done ){
+        this.inheritedAsync( arguments, function( err, res ){
+
+          var newResult = res + p1;
+          console.log("Returning this instead:", newResult );
 
           // Modifying what is returned by the original async method
-          done( null, res + p1 );
+          done( null, newResult );
         });
       },
     });
@@ -142,27 +158,53 @@ Code:
     // Async methods, main one and redefined one
     baseObject.asyncMethod( 3, 7, function( err, res ){
       if( err ){
-        console.log("ERROR!");
-        console.log( err );
+        console.log("ERROR!", err );
       } else {
-        console.log("Result of async method for baseObject:");
-        console.log( res );
+        console.log("Result of async method for baseObject:", res );
+
+        console.log("Now calling asyncMethod for derived object...");
 
         derivedObject.asyncMethod( 3, 7, function( err, res ){
           if( err ){
-            console.log("ERROR!");
-            console.log( err );
+            console.log("ERROR!", err );
           } else {
  
-            console.log("Result of async method for derivedObject:");
-            console.log( res );
-          }
+            console.log("Result of async method for derivedObject:", res );          }
         });
       }
     });
 
 
-A little mental puzzle about `this.inherited()`: The function `this.inherited( assignA, arguments )` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited( m, arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
+A little mental puzzle about `this.inherited()`: The function `this.inherited( arguments )` will call the constructor of the first matching class going up the chain, even if its direct parent doesn't implement that method. So, if class `A` defines `m()`, and class `B` inherits from `A`, and class `C` inherits from `B`, then `C` can call `this.inherited( m, arguments)` in `m()` and expect `A`'s `m()` to be called even if `B` doesn't implement `m()` at all. (You may need to read this sentence a couple of times before it makes perfect sense)
+
+Note that in this code `c.m()` will call both `C`'s `m()` _and_ `A`'s `m()`.
+
+````javascript 
+    var A = declare( null, {
+      m: function(){
+        console.log("A::m");
+      }
+    });
+
+    // Note that B doesn't implement m()
+    var B = declare( A );
+
+    var C = declare( B, {
+      m: function(){
+        console.log("C::m, now calling inherited one:");
+        this.inherited(arguments );
+      }
+    })
+
+    var a = new A();
+    var b = new B();
+    var c = new C();
+
+    console.log("Calling a.m()")
+    a.m();
+    console.log("Calling c.m()")
+    c.m();
+````
 
 ### Create a new mixin class/constructor function
 
@@ -171,7 +213,7 @@ Mixins are simple classes that are meant to "augment" another class. They are ge
 Here is a mixin that:
 
 * Once again defines a constructor that will change the value of `this.a`
-* Redefines the `assignB()` method, using `this.inherited()` to call the "original" `assignB` method. Note that in this example it actually calls the original method passing a different parameter. So, `this.b` will be initialised to something different than the original method intended. This is what you get for "mixing in" with the wrong crowd!
+* Redefines the `assignB()` method, using `this.inherited()` to call the "original" `assignB` method. Note that in this example `this.b` will be initialised to something different than the original method intended. This is what you get for "mixing in" with the wrong crowd!
 * Defines a new `assignC()` method that defines `this.c`
 
 Note how in order to mix in the `Mixin` class to `DerivedCass`, `declare()` is passed an array. When you do that, classes are "mixed in" together. It's important that you code Mixin properly: when you write a Mixin, you cannot actualy be sure what the class is inheriting from. See mixins as ways to extend existing classes in a generic way, or change the behaviour of specific methods in a class.
@@ -181,7 +223,7 @@ Also, note how simpledeclare doesn't check if a class has already been mixed in/
 Code:
 
     // Create a Mixin class: a class that doesn't inherit from anything,
-    // and just adds/redefines methods of the original class. Great for drivers!
+    // and just adds/redefines methods of the original class.
 
     var Mixin = declare( null, {
 
@@ -193,17 +235,18 @@ Code:
       },
 
       // Redefine the assignB method
-      assignB: function assignB( p ){
+      assignB: function assignB( b ){
 
         console.log( "Running assignB within mixin..." );
 
         // Call the original `assignB` method. Note that the original
         // `assignB()` method will be called with a different parameter
-        var r = this.inherited( assignB, [ p + 1 ] );
+        var r = this.inherited(arguments );
+        this.b = 20000;
         console.log( "The inherited assignB() method returned: " + r );
 
-        // Return something completely different
-        return 20000;
+        // Return b
+        return this.b;
       },
 
       // Make up a new `assignC()` method
@@ -302,6 +345,8 @@ Code:
     MultipleClass.classMethod();
     MultipleClass.classMethod2();
 
+
+
 # The problem it solves - little read for skeptics
 
 Node.js provides a very basic function to implement classes that inherit from others: `util.inherits()`. This is hardly enough: code often ends up looking like this:
@@ -365,7 +410,7 @@ The equivalent to the code above, which is also the example code provided, is:
       },  
 
       assignB: function assignB( p ){
-        this.inherited( assignB, arguments );
+        this.inherited(arguments );
         this.b ++;
       },
 
