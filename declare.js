@@ -14,8 +14,8 @@ var async = require('async');
 // Note to self: I didn't think I would ever end up writing
 // something like this. I wish super() was implemented in node.
 // We will need to wait for ECMA 6... Ugh.
-var inherited = function( type, args, cb ){  
 
+var inherited = function( type, args, cb ){
 
   var bases = this.__proto__.bases || workoutBases( this.constructor );
   var callee = args.callee;
@@ -253,7 +253,7 @@ var declare = function( SuperCtor, protoMixin ){
 
       if( proto.constructor !== Object ){
         MixedClass = makeConstructor( MixedClass, proto );
-        MixedClass.prototype.originalConstructor = proto.constructor.hasOwnProperty( 'originalConstructor' ) ? proto.constructor.originalConstructor : proto.constructor;
+        MixedClass.originalConstructor = proto.constructor.hasOwnProperty( 'originalConstructor' ) ? proto.constructor.originalConstructor : proto.constructor;
 
         copyClassMethods( M, MixedClass ); // Methods previously inherited
         copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
@@ -302,10 +302,7 @@ declare.addBasesToPrototype = function( Ctor ){
 exports = module.exports = declare;
 
 
-
-
-
-
+/*
 function inspectProto( o ){
   var r = [];
 
@@ -330,6 +327,8 @@ function inspectProto( o ){
 
   });
 }
+
+*/
 
 /*
 
@@ -394,6 +393,7 @@ console.log(".................................................");
 console.log(".................................................");
 */
 
+
 /*
    var Z1 = declare( null,{
      _constructor: function(){ console.log("Z1 Constructor called"); },
@@ -419,7 +419,7 @@ console.log(".................................................");
    });
 
 
-   var Aa = declare( [ Z1, Z2 ], {
+   var Aa = declare( [ Z1 ], {
       constructor: function(){ console.log("Aa Constructor called"); },
 
       name: 'Aa',
@@ -491,9 +491,9 @@ debugger;
 
 var d = new D();
 d.name = "ME";
-inspectProto( d );
+//inspectProto( d );
 
-console.log("TRUE?", d.instanceOf( Z1 ) ); 
+console.log("TRUE?", d.instanceOf( Z2 ) ); 
 
 console.log("RUNNING d.m():");
 d.m( "pippo", function( err, res ){
@@ -501,6 +501,7 @@ d.m( "pippo", function( err, res ){
 });
 
 process.exit( 1 );
+
 */
 
 /*
