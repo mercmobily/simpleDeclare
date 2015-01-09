@@ -212,40 +212,41 @@ var copyClassMethods = function( Source, Dest ){
   // Copy class methods over
   if( Source !== null ){
     Object.keys( Source ).forEach( function( property ) {
-      if( property !== 'bases' && property !== 'super' ){
+      if( property !== 'bases' && property !== 'originalConstructor' ){
         Dest[ property ] = Source[ property ];
       }
     });
   }
 }
 
-var declare = function( SuperCtor, protoMixin ){
+var declare = function( SuperCtorList, protoMixin ){
 
   var ResultClass;
 
-  // Check that SuperCtor is the right type
-  if( SuperCtor !== null && typeof( SuperCtor ) !== 'function' && !Array.isArray( SuperCtor ) ){
+  // Check that SuperCtorList is the right type
+  if( SuperCtorList !== null && typeof( SuperCtorList ) !== 'function' && !Array.isArray( SuperCtorList ) ){
     throw new Error( "SuperCtor parameter illegal in declare");
   }
 
   // SuperCtor is null: the array will be an empty list
-  if( SuperCtor === null ) SuperCtor = [];
-  if( ! Array.isArray( SuperCtor ) ) SuperCtor = [ SuperCtor ];
+  if( SuperCtorList === null ) SuperCtorList = [];
+  if( ! Array.isArray( SuperCtorList ) ) SuperCtorList = [ SuperCtorList ];
 
-  // Empty starting point
-  //var MixedClass = BaseConstructor;
-  var MixedClass = SuperCtor[ 0 ] || Object;
+  // Set the starting point. It's either the first SuperCtor, or
+  // Object
+  var MixedClass = SuperCtorList[ 0 ] || Object;
 
-  //if( SuperCtor.length === 1 && SuperCtor[ 0 ].prototype.__proto__ === Object.prototype ){};
 
   // Enrich MixedClass inheriting from itself, adding SuperCtor.prototype and
   // adding class methods
-  SuperCtor.forEach( function( SuperCtor, k ){
+
+  // The class is inheriting from more than one class: it will go through
+  // every __proto__ of every derivative class, and will augment MixedClass by
+  // inheriting from each one of them
+  for( var i = 1, l = SuperCtorList.length; i < l; i ++ ){
     var proto;
 
-    if( k === 0 ) return;
-
-    proto = SuperCtor.prototype;
+    proto = SuperCtorList[ i ].prototype;
     var list = [];
     while( proto ){
       list.push( proto );
@@ -256,21 +257,25 @@ var declare = function( SuperCtor, protoMixin ){
       var M = MixedClass;
 
       if( proto.constructor !== Object ){
-        MixedClass = makeConstructor( MixedClass, proto );
+        
+        MixedClass = makeConstructor( MixedClass, proto );    
+        copyClassMethods( M, MixedClass ); // Methods previously inherited
+
+        copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
+
+        // This will make this.instanceOf() work
         MixedClass.originalConstructor = proto.constructor.hasOwnProperty( 'originalConstructor' ) ? proto.constructor.originalConstructor : proto.constructor;
 
-        copyClassMethods( M, MixedClass ); // Methods previously inherited
-        copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
       }
     })
-  });
+  };
 
   // Finally, inherit from the MixedClass, and add
   // class methods over
   var ResultClass = makeConstructor( MixedClass, protoMixin );
 
   copyClassMethods( MixedClass, ResultClass );
-  ResultClass.originalConstructor = ResultClass;
+  ResultClass.originalConstructor = ResultClass; // This will make this.instanceOf() work
 
   // Cache `bases`
   ResultClass.prototype.bases = workoutBases( ResultClass );
