@@ -150,7 +150,7 @@ var workoutBases = function( Ctor ){
 }
 
   
-var makeConstructor = function( FromCtor, protoMixin, isFunctionsProto ) {
+var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){ // isFunctionsProto, WhichFunction ) {
 
   // The constructor that will get returned. It's basically a function
   // that calls the parent's constructor and then protoMixin.constructor.
@@ -158,18 +158,17 @@ var makeConstructor = function( FromCtor, protoMixin, isFunctionsProto ) {
   //  as they SHOULD, `prototype.constructor` set)
   var ReturnedCtor = function(){
 
-    var base;
-
-    // Run all _constructors in the right order
-    var bases = this.__proto__.bases || workoutBases( this.constructor ); 
-
-    // Run all of the init() functions in the base 
-    for( var i = 0, l = bases.length; i < l; i ++ ){
-      base = bases[ i ];
-      if( base.prototype.hasOwnProperty('_constructor') ) {
-        base.prototype._constructor.apply( this, arguments );
-      }
+    // Run the parent's constructor if present
+    if( ReturnedCtor.prototype.__proto__ && ReturnedCtor.prototype.__proto__.constructor ){
+      ReturnedCtor.prototype.__proto__.constructor.apply( this, arguments );
     }
+
+    // If an actual constructor is set, it was placed in ReturnedCtor.ActialCtor.
+    // If there is one, run it
+    if( ReturnedCtor.hasOwnProperty( 'ActualCtor' ) ){
+      ReturnedCtor.ActualCtor.apply( this, arguments );
+    }
+  
   };
 
   if( protoMixin === null ) protoMixin = {};
@@ -189,28 +188,48 @@ var makeConstructor = function( FromCtor, protoMixin, isFunctionsProto ) {
   });
 
   // Copy every element in protoMixin into the prototype.
-  // `constructor` is ignored IN function's prototype copying (making mixins)
-  // `constructor` is copyed as `_constructor` in any other case.
-  // This means that when declaring classes you can define either
-  // `_constructor` or `constructor` safely.
+  // Note that `constructor` is special: it's _not_ copied over.
+  // Instead, it's placed in ReturnedCtor.ActualCtor.
+  // It can either come:
+  //   * from protoMixin, in cases where SourceOfProto is not defined
+  //     (which means that it's what the developer passed herself in `protoMixin`)
+  //   * from the source of protoMixin, in cases where SourceOfProto is defined
+  //     (which means that we are taking it from the SourceOfProto, since the goal
+  //      is to mimic it completely creating a working copy of the original constructor)
+
   var ownProps = Object.getOwnPropertyNames( protoMixin );
   for( var i = 0, l = ownProps.length; i < l; i ++ ){
     var k = ownProps[ i ];
-    if( isFunctionsProto && k === 'constructor' ) continue;
-    var j =  k === 'constructor' ? '_constructor' :  k
-    ReturnedCtor.prototype[ j ] = protoMixin[ k ];
-  };
+    if( k === 'constructor' ) continue;
+    ReturnedCtor.prototype[ k ] = protoMixin[ k ];
 
+    // ActualCtor comes from what the user placed as `constructor` as the second
+    // parameter of `declare()`
+    if( ! SourceOfProto && protoMixin.hasOwnProperty( 'constructor' ) ){
+      ReturnedCtor.ActualCtor = protoMixin.constructor;
+    }
+  };
+  // ActualCtor comes from the SourceOfProto, the constructor function we are
+  // emulating
+  if( SourceOfProto ){
+    if( SourceOfProto.hasOwnProperty('ActualCtor') ) ReturnedCtor.ActualCtor = SourceOfProto.ActualCtor;
+  }
+
+  // That's it!
   return ReturnedCtor;
 }
 
 var copyClassMethods = function( Source, Dest ){
 
   // Copy class methods over
-  if( Source !== null ){
-    Object.keys( Source ).forEach( function( property ) {
-      if( property !== 'bases' && property !== 'originalConstructor' ){
-        Dest[ property ] = Source[ property ];
+  if( Source !== null && Source !== Object ){
+
+    var ownProps = Object.getOwnPropertyNames( Source );
+    ownProps.forEach( function( property ) {
+      if( Function.prototype[ property ] !== Source[ property ] && property !== 'prototype' ){
+        if( [ 'ActualCtor', 'extend', 'originalConstructor' ].indexOf( property ) === -1 ){
+          Dest[ property ] = Source[ property ];
+        }
       }
     });
   }
@@ -255,9 +274,9 @@ var declare = function( SuperCtorList, protoMixin ){
 
       if( proto.constructor !== Object ){
 
-        MixedClass = makeConstructor( MixedClass, proto, true );    
-        copyClassMethods( M, MixedClass ); // Methods previously inherited
+        MixedClass = makeConstructor( MixedClass, proto, proto.constructor );    
 
+        copyClassMethods( M, MixedClass ); // Methods previously inherited
         copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
 
         // This will make this.instanceOf() work
@@ -269,7 +288,7 @@ var declare = function( SuperCtorList, protoMixin ){
 
   // Finally, inherit from the MixedClass, and add
   // class methods over
-  var ResultClass = makeConstructor( MixedClass, protoMixin, false );
+  var ResultClass = makeConstructor( MixedClass, protoMixin );
 
   copyClassMethods( MixedClass, ResultClass );
   ResultClass.originalConstructor = ResultClass; // This will make this.instanceOf() work
@@ -307,20 +326,30 @@ declare.addBasesToPrototype = function( Ctor ){
 
 exports = module.exports = declare;
 
-var A = declare( null, { name: 'A' } );
+var A = declare( null, { name: 'A', constructor:function(){  console.log("A's constructor"); }  } );
 var a = new A();
 console.log( "a instanceof A: ", a instanceof A );
 console.log( "a.instanceOf A: ", a.instanceOf( A ) );
 
 
-var B = declare( A, { name: 'B' } );
+var B = declare( A, { name: 'B', constructor:function(){  console.log("B's constructor"); } } );
 var b = new B();
+
+console.log("b's proto", b.__proto__);
+
+console.log("b's proto's proto", b.__proto__.__proto__);
+
+debugger;
+
+console.log("b's proto's ActualCtor:", b.__proto__.constructor.ActualCtor ? b.__proto__.constructor.ActualCtor.toString() : "NONE" );
+console.log("b's proto's proto's ActualCtor:", b.__proto__.__proto__.constructor.ActualCtor ? b.__proto__.__proto__.constructor.ActualCtor.toString() : "NONE");
+
+
+//process.exit( 1 );
 console.log( "b instanceof B: ", b instanceof B );
 console.log( "b.instanceOf B: ", b.instanceOf( B ) );
 console.log( "b instanceof A: ", b instanceof A );
 console.log( "b.instanceOf A: ", b.instanceOf( A ) );
-
-debugger;
 
 
 function inspectProto( o ){
@@ -416,7 +445,7 @@ console.log(".................................................");
 
 
    var Z1 = declare( null,{
-     _constructor: function(){ console.log("Z1 Constructor called"); },
+     constructor: function(){ console.log("Z1 Constructor called"); },
      name: 'Z1',
      mm1: function( param, cb ){
         console.log("Z1::mm", param );
@@ -429,7 +458,7 @@ console.log(".................................................");
     init: function(){ console.log("Z2 Constructor called"); },
 
     name: 'Z2',
-    _constructor: function(){ console.log("Z2's constructor"); },
+    constructor: function(){ console.log("Z2's constructor"); },
 
      mm2: function( param, cb ){
         console.log("Z2::mm", param );
@@ -455,7 +484,7 @@ console.log(".................................................");
 
     // Note that B doesn't implement m()
     var Ba = declare( null, {
-      _constructor: function(){ console.log("Ba Constructor called"); },
+      constructor: function(){ console.log("Ba Constructor called"); },
 
       name: 'Ba',
       m: function( param, cb ){
@@ -469,7 +498,7 @@ console.log(".................................................");
     } );
 
     var Ca = declare( null, {
-      _constructor: function(){ console.log("Ca Constructor called"); },
+      constructor: function(){ console.log("Ca Constructor called"); },
       name: 'Ca',
       m: function( param, cb ){
         console.log("Ca::m", param );
@@ -489,7 +518,7 @@ console.log(".................................................");
 var D = declare( [ Aa, Ba, Ca ], {
 //var D = Aa.extend( [ Ba, Ca ], {
 
-  _constructor: function(){
+  constructor: function(){
     console.log("D1 Constructor called");
   },
 
@@ -507,10 +536,11 @@ var D = declare( [ Aa, Ba, Ca ], {
 });
 
 
-debugger;
 
 var d = new D();
 d.name = "ME";
+debugger;
+
 //inspectProto( d );
 
 console.log("TRUE?", d.instanceOf( Z2 ) ); 
