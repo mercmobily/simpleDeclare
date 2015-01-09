@@ -1,4 +1,4 @@
-"use NOstrict";
+"use NONstrict";
 /*
 Copyright (C) 2015 Tony Mobily
 
@@ -220,7 +220,7 @@ var copyClassMethods = function( Source, Dest ){
 }
 
 var declare = function( SuperCtor, protoMixin ){
-  
+
   var ResultClass;
 
   // Check that SuperCtor is the right type
@@ -234,12 +234,16 @@ var declare = function( SuperCtor, protoMixin ){
 
   // Empty starting point
   //var MixedClass = BaseConstructor;
-  var MixedClass = Object;
+  var MixedClass = SuperCtor[ 0 ] || Object;
+
+  //if( SuperCtor.length === 1 && SuperCtor[ 0 ].prototype.__proto__ === Object.prototype ){};
 
   // Enrich MixedClass inheriting from itself, adding SuperCtor.prototype and
   // adding class methods
-  SuperCtor.forEach( function( SuperCtor ){
+  SuperCtor.forEach( function( SuperCtor, k ){
     var proto;
+
+    if( k === 0 ) return;
 
     proto = SuperCtor.prototype;
     var list = [];
@@ -259,15 +263,14 @@ var declare = function( SuperCtor, protoMixin ){
         copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
       }
     })
-
   });
 
   // Finally, inherit from the MixedClass, and add
   // class methods over
   var ResultClass = makeConstructor( MixedClass, protoMixin );
-  ResultClass.originalConstructor = ResultClass;
 
   copyClassMethods( MixedClass, ResultClass );
+  ResultClass.originalConstructor = ResultClass;
 
   // Cache `bases`
   ResultClass.prototype.bases = workoutBases( ResultClass );
@@ -291,6 +294,7 @@ var declare = function( SuperCtor, protoMixin ){
 };
 
 
+
 // Returned extra: declarableObject
 declare.declarableObject = declare( null );
 
@@ -301,8 +305,22 @@ declare.addBasesToPrototype = function( Ctor ){
 
 exports = module.exports = declare;
 
+var A = declare( null, { name: 'A' } );
+var a = new A();
+console.log( "a instanceof A: ", a instanceof A );
+console.log( "a.instanceOf A: ", a.instanceOf( A ) );
 
-/*
+
+var B = declare( A, { name: 'B' } );
+var b = new B();
+console.log( "b instanceof B: ", b instanceof B );
+console.log( "b.instanceOf B: ", b.instanceOf( B ) );
+console.log( "b instanceof A: ", b instanceof A );
+console.log( "b.instanceOf A: ", b.instanceOf( A ) );
+
+debugger;
+
+
 function inspectProto( o ){
   var r = [];
 
@@ -328,7 +346,7 @@ function inspectProto( o ){
   });
 }
 
-*/
+
 
 /*
 
@@ -394,7 +412,7 @@ console.log(".................................................");
 */
 
 
-/*
+
    var Z1 = declare( null,{
      _constructor: function(){ console.log("Z1 Constructor called"); },
      name: 'Z1',
@@ -494,15 +512,16 @@ d.name = "ME";
 //inspectProto( d );
 
 console.log("TRUE?", d.instanceOf( Z2 ) ); 
+console.log("TRUE?", d instanceof( Aa ) ); 
+
 
 console.log("RUNNING d.m():");
 d.m( "pippo", function( err, res ){
   console.log("returned: ", res );
 });
 
-process.exit( 1 );
+//process.exit( 1 );
 
-*/
 
 /*
 
