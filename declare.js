@@ -150,7 +150,7 @@ var workoutBases = function( Ctor ){
 }
 
   
-var makeConstructor = function( FromCtor, protoMixin ) {
+var makeConstructor = function( FromCtor, protoMixin, isFunctionsProto ) {
 
   // The constructor that will get returned. It's basically a function
   // that calls the parent's constructor and then protoMixin.constructor.
@@ -189,20 +189,17 @@ var makeConstructor = function( FromCtor, protoMixin ) {
   });
 
   // Copy every element in protoMixin into the prototype.
-  // If constructor in protoMixin, then actually copy it as _constructor.
-  // This is mainly for backwards compatibility.
-  // It does an extra check to make sure it doesn't copy ReturnedCtor
-  // twice (in case it's copying the prototype from another simpleDeclare constructor) 
-  Object.getOwnPropertyNames( protoMixin ).forEach( function( k ){
-    if( k !== 'constructor' ){
-      ReturnedCtor.prototype[ k ] = protoMixin[ k ];
-    } else {
-      var j = k === 'constructor' ? '_constructor' : k;
-      // There must be a better way of doing this. Really.
-      if( protoMixin[ k ].toString() !== ReturnedCtor.toString() ) ReturnedCtor.prototype[ j ] =protoMixin[ k ];
-    }
-
-  });
+  // `constructor` is ignored IN function's prototype copying (making mixins)
+  // `constructor` is copyed as `_constructor` in any other case.
+  // This means that when declaring classes you can define either
+  // `_constructor` or `constructor` safely.
+  var ownProps = Object.getOwnPropertyNames( protoMixin );
+  for( var i = 0, l = ownProps.length; i < l; i ++ ){
+    var k = ownProps[ i ];
+    if( isFunctionsProto && k === 'constructor' ) continue;
+    var j =  k === 'constructor' ? '_constructor' :  k
+    ReturnedCtor.prototype[ j ] = protoMixin[ k ];
+  };
 
   return ReturnedCtor;
 }
@@ -257,8 +254,8 @@ var declare = function( SuperCtorList, protoMixin ){
       var M = MixedClass;
 
       if( proto.constructor !== Object ){
-        
-        MixedClass = makeConstructor( MixedClass, proto );    
+
+        MixedClass = makeConstructor( MixedClass, proto, true );    
         copyClassMethods( M, MixedClass ); // Methods previously inherited
 
         copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
@@ -272,7 +269,7 @@ var declare = function( SuperCtorList, protoMixin ){
 
   // Finally, inherit from the MixedClass, and add
   // class methods over
-  var ResultClass = makeConstructor( MixedClass, protoMixin );
+  var ResultClass = makeConstructor( MixedClass, protoMixin, false );
 
   copyClassMethods( MixedClass, ResultClass );
   ResultClass.originalConstructor = ResultClass; // This will make this.instanceOf() work
