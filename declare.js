@@ -9,6 +9,16 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+
+/*
+
+  TODO:
+    * CRUCIAL: Write tests
+    * CRUCIAL: Rewrite documentation
+    * PERFORMANCE: Add memoization to inherited()
+    * PERFORMANCE: Get rid of forEach()es and use cycles instead
+    * MAYBE: Place 'bases', 'ActualCtor', originalConstructor' in 'meta'
+*/
 var async = require('async');
 
 // Note to self: I didn't think I would ever end up writing
@@ -227,11 +237,11 @@ var copyClassMethods = function( Source, Dest ){
 
     var ownProps = Object.getOwnPropertyNames( Source );
     ownProps.forEach( function( property ) {
-      if( Function.prototype[ property ] !== Source[ property ] && property !== 'prototype' ){
-        if( [ 'bases', 'ActualCtor', 'extend', 'originalConstructor' ].indexOf( property ) === -1 ){
-          Dest[ property ] = Source[ property ];
-        }
-      }
+      // It's one of the attriutes' in Function()'s prototype: skip
+      if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) return;
+      // It's one of the attributes managed by simpleDeclare: skip
+      if( [ 'bases', 'ActualCtor', 'extend', 'originalConstructor' ].indexOf( property ) !== -1 ) return;
+      Dest[ property ] = Source[ property ];
     });
   }
 }
@@ -319,7 +329,7 @@ var declare = function( SuperCtorList, protoMixin ){
 
 
 // Returned extra: declarableObject
-declare.declarableObject = declare( null );
+declare.extendableObject = declare( null );
 
 // Returned extra: addBasesToPrototype
 declare.addBasesToFuncton = function( Ctor ){
@@ -328,6 +338,10 @@ declare.addBasesToFuncton = function( Ctor ){
 
 exports = module.exports = declare;
 
+/*
+var P = declare.extendableObject.extend( { p: 10 });
+debugger;
+*/
 
 /*
 
