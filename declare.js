@@ -17,7 +17,7 @@ var async = require('async');
 
 var inherited = function( type, args, cb ){
 
-  var bases = this.__proto__.bases || workoutBases( this.constructor );
+  var bases = this.constructor.bases || workoutBases( this.constructor );
   var callee = args.callee;
 
   // First of all, look in the object itself
@@ -121,7 +121,7 @@ var extend = function( SuperCtor, protoMixin ){
 var instanceOf = function( What ){
   
   // Work out the bases where to search
-  var bases = this.constructor.prototype.bases || workoutBases( this.constructor ); 
+  var bases = this.constructor.bases || workoutBases( this.constructor ); 
 
   // Search for a matching prototype
   for( var i = 0, l = bases.length; i < l; i ++ ){
@@ -200,7 +200,8 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){ // isFunc
   var ownProps = Object.getOwnPropertyNames( protoMixin );
   for( var i = 0, l = ownProps.length; i < l; i ++ ){
     var k = ownProps[ i ];
-    if( k === 'constructor' ) continue;
+
+    if( [ 'constructor' ].indexOf( k ) !== -1 ) continue;
     ReturnedCtor.prototype[ k ] = protoMixin[ k ];
 
     // ActualCtor comes from what the user placed as `constructor` as the second
@@ -227,7 +228,7 @@ var copyClassMethods = function( Source, Dest ){
     var ownProps = Object.getOwnPropertyNames( Source );
     ownProps.forEach( function( property ) {
       if( Function.prototype[ property ] !== Source[ property ] && property !== 'prototype' ){
-        if( [ 'ActualCtor', 'extend', 'originalConstructor' ].indexOf( property ) === -1 ){
+        if( [ 'bases', 'ActualCtor', 'extend', 'originalConstructor' ].indexOf( property ) === -1 ){
           Dest[ property ] = Source[ property ];
         }
       }
@@ -279,7 +280,9 @@ var declare = function( SuperCtorList, protoMixin ){
         copyClassMethods( M, MixedClass ); // Methods previously inherited
         copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
 
-        // This will make this.instanceOf() work
+        // This will make this.instanceOf() work, and it will give us a link
+        // to the constructor that actually originated this copy.
+        // Note that copies of copies will still retain the original one
         MixedClass.originalConstructor = proto.constructor.hasOwnProperty( 'originalConstructor' ) ? proto.constructor.originalConstructor : proto.constructor;
 
       }
@@ -294,7 +297,7 @@ var declare = function( SuperCtorList, protoMixin ){
   ResultClass.originalConstructor = ResultClass; // This will make this.instanceOf() work
 
   // Cache `bases`
-  ResultClass.prototype.bases = workoutBases( ResultClass );
+  ResultClass.bases = workoutBases( ResultClass );
 
   // Add inherited() and inheritedAsync() to the prototype
   ResultClass.prototype.inherited = function( args ){
@@ -315,16 +318,18 @@ var declare = function( SuperCtorList, protoMixin ){
 };
 
 
-
 // Returned extra: declarableObject
 declare.declarableObject = declare( null );
 
 // Returned extra: addBasesToPrototype
-declare.addBasesToPrototype = function( Ctor ){
-  Ctor.prototype.bases = workoutBases( Ctor )
+declare.addBasesToFuncton = function( Ctor ){
+  Ctor.bases = workoutBases( Ctor )
 }
 
 exports = module.exports = declare;
+
+
+/*
 
 var A = declare( null, { name: 'A', constructor:function(){  console.log("A's constructor"); }  } );
 var a = new A();
@@ -377,7 +382,7 @@ function inspectProto( o ){
   });
 }
 
-
+*/
 
 /*
 
@@ -442,7 +447,7 @@ console.log(".................................................");
 console.log(".................................................");
 */
 
-
+/*
 
    var Z1 = declare( null,{
      constructor: function(){ console.log("Z1 Constructor called"); },
@@ -554,6 +559,7 @@ d.m( "pippo", function( err, res ){
 
 //process.exit( 1 );
 
+*/
 
 /*
 
