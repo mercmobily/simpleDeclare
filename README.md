@@ -43,7 +43,7 @@ This is the simplest way to create a constructor function: the first parameter, 
 You can ee that A's prototype also contains extra methods: `inherited()` and `inheritedAsync()` (which will call `method1()` of the parent) and `instanceOf()` (which checks if an object is the instance of a constructor, _including mixins_ -- more about this later).
 
 
-## Simple inheritance from Object with constructor
+## Simple inheritance from Object with initialisation function
 
 ````Javascript
     var A = declare( null, {
@@ -148,6 +148,9 @@ Also note that when running `new B()`, _both_ constructors are run, in the right
     console.log("method1() defined the good old Javascript way")
   }
 ````
+
+
+
 
 ````Javascript
 ````
