@@ -47,12 +47,13 @@ You can ee that A's prototype also contains extra methods: `inherited()` and `in
 
 ````Javascript
     var A = declare( null, {
+      constructor: function( p ){
+        console.log("A's constructor called with parameter: " + p )
+      },
+
       method1: function( parameter ){
         console.log("A::method1() called!")
       },
-      constructor: function( p ){
-        console.log("A's constructor called with parameter: " + p )
-      }
     })
 
     var a = new A( 10 ); // => A's constructor called with parameter: 10
@@ -135,8 +136,17 @@ Here, a `constructor` attribute is passed: it will be called every time a new in
 
 Note that the attribute `name` is only here so that you can clearly recognise which prototype you're looking at. It has no special meaning for SimpleDeclare itself.
 
-Also note that when running `new B()`, _both_ constructors are run, in the right order. This means that when you define a constructor with simpleDeclare you can rest assured that _every_ constructor function passed as `constructor` will actually be run.
+Also note that when running `new B()`, _both_ constructors are run, in the right order. This means that when you define a constructor with simpleDeclare you can rest assured that _every_ initialisation function passed as `constructor` will actually be run (with the parameters passed to B() ).
 
+
+TO DOCUMENT:
+
+* this.inherited()
+* this.inheritedAsync()
+* Simple inheritance with classic Functions (mention calling parent constructor)
+* Simple inheritance using extend()
+* Multiple inheritance (explain that anything after 1st if a mixin, `instanceOf()` )
+* Multiple inheritance using extend()
 
 ## Simple inheritance from normal Javascript objects
 
@@ -149,7 +159,7 @@ Also note that when running `new B()`, _both_ constructors are run, in the right
   }
 ````
 
-
+# DOCUMENTATION REWRITE ENDS HERE
 
 
 ````Javascript
