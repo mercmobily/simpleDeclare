@@ -19,7 +19,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     * PERFORMANCE: Get rid of forEach()es and use cycles instead
     * MAYBE: Place 'bases', 'ActualCtor', originalConstructor' in 'meta'
 */
-var async = require('async');
 
 // Note to self: I didn't think I would ever end up writing
 // something like this. I wish super() was implemented in node.
@@ -314,81 +313,7 @@ declare.extendableObject = declare( null );
 exports = module.exports = declare;
 
 
-
-
-
-
-    var A = declare( null, {
-
-      name: 'A',
-
-      constructor: function( p ){
-        console.log("A's constructor called with parameter: " + p )
-      },
- 
-      method1: function( parameter ){
-        console.log("A::method1() called")
-      },
-
-      method2: function( parameter ){
-        console.log("A::method2() called")
-      },
-    })
-
-    var B = declare( A, {
-
-      name: 'B',
-
-      constructor: function( p ){
-        console.log("B's constructor called with parameter: " + p )
-      },
- 
-      method1: function( parameter ){
-        console.log("B::method2() called");
-      }
-    })
-
-    var a = new A( 10 ); // => A's constructor called with parameter: 10
-    a.method1(); // => A::method1() called
-    a.method2(); // => A::method2() called
-
-    var b = new B( 11 );
-    /* =>
-    B's constructor called with parameter: 11
-    A's constructor called with parameter: 11
-    */
-
-    b.method1(); // => B::method1() called
-
-    console.log( a.__proto__ );
-    /* =>
-    { name: 'A',
-      method1: [Function],
-      method2: [Function],
-      inherited: [Function],
-      inheritedAsync: [Function],
-      instanceOf: [Function] }
-    */
-    console.log( a.__proto__.__proto__ ); // => {}
-    console.log( a.__proto__.__proto__.constructor === Object ); // true
-
-    console.log( b.__proto__ ); // => { name: 'B', method1: [Function] }
-    console.log( b.__proto__.__proto__ );
-    /* =>
-    { name: 'A',
-      method1: [Function],
-      method2: [Function],
-      inherited: [Function],
-      inheritedAsync: [Function],
-      instanceOf: [Function] }
-    */
-    console.log( b.__proto__.__proto__.constructor === A ); // => true
-    console.log( b.__proto__.__proto__.__proto__ ); // => {}
-    console.log( b.__proto__.__proto__.__proto__.constructor === Object ); // => true 
-
-
-//process.exit( 1 );
-
+/*
 
 var P = declare.extendableObject.extend( { p: 10 });
 debugger;
@@ -1198,3 +1123,4 @@ var r = abc.m1( 'pippo');
 console.log("RESULT:", r );
 
 
+*/
