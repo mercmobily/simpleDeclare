@@ -142,20 +142,16 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
   //  as they SHOULD, `prototype.constructor` set)
   var ReturnedCtor = function(){
 
-    //console.log("IN:", ReturnedCtor.prototype.name );    
-
     // Run the parent's constructor if present
     if( ReturnedCtor.prototype.__proto__  && ReturnedCtor.prototype.__proto__.constructor !== Object ){
-      //console.log("PARENT:", ReturnedCtor.prototype.__proto__.name );
       ReturnedCtor.prototype.__proto__.constructor.apply( this, arguments );
     }
 
     // The stock constructor will simply run `ActualConstructor` if it's found.
     if( ReturnedCtor.hasOwnProperty( 'ActualConstructor' ) ){
-
       ReturnedCtor.ActualConstructor.apply( this, arguments );
-    } 
-  
+    }
+
   };
 
   if( protoMixin === null ) protoMixin = {};
@@ -168,7 +164,7 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
   ReturnedCtor.prototype = Object.create(FromCtor.prototype, {
     constructor: {
       value: ReturnedCtor,
-      //enumerable: false,
+      enumerable: false,
       enumerable: true,
 
       writable: true,
@@ -323,6 +319,22 @@ var declare = function( SuperCtorList, protoMixin ){
 declare.extendableObject = declare( null );
 
 exports = module.exports = declare;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*
