@@ -17,29 +17,21 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     * CRUCIAL: Write tests
     * PERFORMANCE: Add memoization to inherited()
     * PERFORMANCE: Get rid of forEach()es and use cycles instead
-    * MAYBE: Place 'bases', 'ActualCtor', originalConstructor' in 'meta'
+    * MAYBE: Place 'bases', 'ActualConstructor', OriginalConstructor' in 'meta'
 */
 
-// Note to self: I didn't think I would ever end up writing
-// something like this. I wish super() was implemented in node.
-// We will need to wait for ECMA 6... Ugh.
-var inherited = function( type, args, cb ){
 
-  // The real function that called this.inherited() is actually two levels up...
-  var f = arguments.callee.caller.caller;
+function getObjectBase( o, fn ){
 
-  // Look for the function itself in the object's prototypal hiherarchy 
-  var currentPoint = this;
-  var found;
+  var found = false, currentPoint = o;
 
-  found = false;
   while( currentPoint ){
 
     var objMethods = Object.getOwnPropertyNames( currentPoint );
     for( var i = 0, l = objMethods.length; i < l; i ++ ){
       var k = objMethods[ i ];
 
-      if( currentPoint.hasOwnProperty( k ) && currentPoint[ k ] === f ){
+      if( currentPoint.hasOwnProperty( k ) && currentPoint[ k ] === fn ){
         found = true;
         break;
       }
@@ -49,30 +41,39 @@ var inherited = function( type, args, cb ){
     currentPoint = currentPoint.__proto__;
   }
 
+  // If nothing was found, return null
+  return { base: currentPoint, key: k };
+}
+
+// This will become a method call, so `this` is the object
+var getInherited = function( fn ){
+
+  if( ! fn ) fn = arguments.callee.caller;
+
+  // Get the object's base 
+  var objectBase = getObjectBase( this, fn );
+
   // If the function is not found anywhere in the prototype chain
   // there is a pretty big problem
-  if( ! found ) throw new Error( "inherited coun't find method in chain -- "  + type );
+  if( ! objectBase.base ) throw new Error( "inherited coun't find method in chain (getInherited)" );
 
   // At this point, I know the key. To look for the super method, I
   // only have to check if one of the parent __proto__ has a matching key `k`
+  return objectBase.base.__proto__[ objectBase.key ]; 
+}
 
-  currentPoint = currentPoint.__proto__; // Starting from the one up
-  found = false;
-  while( currentPoint ){
-    if( currentPoint.hasOwnProperty( k ) ){
-      found = true;
-      break;
-    }
-    currentPoint = currentPoint.__proto__;
-  }
 
-  // No inherited element in the chain, just call the callback (async) or return nothing
-  if( ! found  ){
-    if( type === 'async' ) return cb.call( this, null );            
+// This will become a method call, so `this` is the object
+var inherited = function( type, args, cb ){
+
+  // Get the inherited function
+  var fn = this.getInherited( arguments.callee.caller.caller );
+
+  // No inherited function in the chain, just call the callback (async) or return nothing
+  if( ! fn  ){
+    if( type === 'async' ) return cb.call( this, null );
     if( type === 'sync' ) return;
   }
-
-  var fn = currentPoint[ k ];
 
   // Call the function. It could be sync or async
   if( type == 'async' ){
@@ -122,10 +123,10 @@ var instanceOf = function( Ctor ){
 
   while( current = current.__proto__){
 
-    // It will compare either with originalConstructor.prototype or plain prototype
-    compare = current.constructor.originalConstructor ?
-              current.constructor.originalConstructor.prototype :
-              current.constructor.prototype;         
+    // It will compare either with OriginalConstructor.prototype or plain prototype
+    compare = current.constructor.OriginalConstructor ?
+              current.constructor.OriginalConstructor.prototype :
+              current.constructor.prototype;
 
     // Actually run the comparison
     if( compare === searchedProto ) return true;
@@ -141,16 +142,19 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
   //  as they SHOULD, `prototype.constructor` set)
   var ReturnedCtor = function(){
 
+    //console.log("IN:", ReturnedCtor.prototype.name );    
+
     // Run the parent's constructor if present
-    if( ReturnedCtor.prototype.__proto__ && ReturnedCtor.prototype.__proto__.constructor ){
+    if( ReturnedCtor.prototype.__proto__  && ReturnedCtor.prototype.__proto__.constructor !== Object ){
+      //console.log("PARENT:", ReturnedCtor.prototype.__proto__.name );
       ReturnedCtor.prototype.__proto__.constructor.apply( this, arguments );
     }
 
-    // If an actual constructor is set, it was placed in ReturnedCtor.ActialCtor.
-    // If there is one, run it
-    if( ReturnedCtor.hasOwnProperty( 'ActualCtor' ) ){
-      ReturnedCtor.ActualCtor.apply( this, arguments );
-    }
+    // The stock constructor will simply run `ActualConstructor` if it's found.
+    if( ReturnedCtor.hasOwnProperty( 'ActualConstructor' ) ){
+
+      ReturnedCtor.ActualConstructor.apply( this, arguments );
+    } 
   
   };
 
@@ -164,7 +168,9 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
   ReturnedCtor.prototype = Object.create(FromCtor.prototype, {
     constructor: {
       value: ReturnedCtor,
-      enumerable: false,
+      //enumerable: false,
+      enumerable: true,
+
       writable: true,
       configurable: true
     },
@@ -172,7 +178,7 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
 
   // Copy every element in protoMixin into the prototype.
   // Note that `constructor` is special: it's _not_ copied over.
-  // Instead, it's placed in ReturnedCtor.ActualCtor.
+  // Instead, it's placed in ReturnedCtor.ActualConstructor.
   // It can either come:
   //   * from protoMixin, in cases where SourceOfProto is not defined
   //     (which means that it's what the developer passed herself in `protoMixin` as `constructor`)
@@ -184,21 +190,27 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
   for( var i = 0, l = ownProps.length; i < l; i ++ ){
     var k = ownProps[ i ];
 
-    if( k !== 'constructor' ) ReturnedCtor.prototype[ k ] = protoMixin[ k ];
-
-    // ActualCtor comes from what the user placed as `constructor` as the second
-    // parameter of `declare()`
-    if( ! SourceOfProto && protoMixin.hasOwnProperty( 'constructor' ) ){
-      ReturnedCtor.ActualCtor = protoMixin.constructor;
-    }
+    if( k !== 'constructor' ) ReturnedCtor.prototype[ k ] = protoMixin[ k ]; 
   };
-  // ActualCtor comes from the SourceOfProto, the constructor function we are
-  // emulating
-  // Basically if the parent class has `ActualCtor`, then the cloned one will also
-  // definitely need it as the stock ReturnedCtor will look for it
-  if( SourceOfProto ){
-    if( SourceOfProto.hasOwnProperty('ActualCtor') ) ReturnedCtor.ActualCtor = SourceOfProto.ActualCtor;
+
+  // We are not cloning a constructor, but creating a brand new one (using protoMixin as
+  // a source of methods that just got added to the prototype).
+  // ActualConstructor will be set to the `constructor` property of protoMixin
+  if( ! SourceOfProto ){
+    if( protoMixin.hasOwnProperty( 'constructor' ) ) ReturnedCtor.ActualConstructor = protoMixin.constructor;
   }
+
+  // We are un the process of cloning an existing constructor.
+  // When doing that:
+  // * ReturnedCtor's ActualConstructor will be set to the Source's ActualConstructor.
+  //   This will ensure that the stock constructor (that just invoks ActualConstructor) works.
+  // * ReturnedCtor's OriginalConstructor will be set to the Source's ActualConstructor.
+  //   This will ensure that we have a path to the actual constructor we actually cloned,
+  //   so that instanceOf() will work (by checking ActualConstructor whenever possible)
+  if( SourceOfProto ){
+    if( SourceOfProto.hasOwnProperty('ActualConstructor') ) ReturnedCtor.ActualConstructor = SourceOfProto.ActualConstructor;
+    ReturnedCtor.OriginalConstructor = SourceOfProto;
+  } 
 
   // That's it!
   return ReturnedCtor;
@@ -214,7 +226,7 @@ var copyClassMethods = function( Source, Dest ){
       // It's one of the attriutes' in Function()'s prototype: skip
       if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) return;
       // It's one of the attributes managed by simpleDeclare: skip
-      if( [ 'ActualCtor', 'extend', 'originalConstructor' ].indexOf( property ) !== -1 ) return;
+      if( [ 'ActualConstructor', 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) return;
       Dest[ property ] = Source[ property ];
     });
   }
@@ -243,7 +255,8 @@ var declare = function( SuperCtorList, protoMixin ){
 
   // The class is inheriting from more than one class: it will go through
   // every __proto__ of every derivative class, and will augment MixedClass by
-  // inheriting from each one of them
+  // inheriting from A COPY OF each one of them.
+  // Class-wide functions are copied over for each iteration
   for( var i = 1, l = SuperCtorList.length; i < l; i ++ ){
     var proto;
 
@@ -260,14 +273,9 @@ var declare = function( SuperCtorList, protoMixin ){
       if( proto.constructor !== Object ){
 
         MixedClass = makeConstructor( MixedClass, proto, proto.constructor );    
-
         copyClassMethods( M, MixedClass ); // Methods previously inherited
-        copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
 
-        // This will make this.instanceOf() work, and it will give us a link
-        // to the constructor that actually originated this copy.
-        // Note that copies of copies will still retain the original one
-        MixedClass.originalConstructor = proto.constructor.hasOwnProperty( 'originalConstructor' ) ? proto.constructor.originalConstructor : proto.constructor;
+        copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
       }
     })
   };
@@ -277,10 +285,14 @@ var declare = function( SuperCtorList, protoMixin ){
   var ResultClass = makeConstructor( MixedClass, protoMixin );
 
   copyClassMethods( MixedClass, ResultClass );
-  ResultClass.originalConstructor = ResultClass; // This will make this.instanceOf() work
+  // if( MixedClass.hasOwnProperty('OriginalConstructor') ) ResultClass.OriginalConstructor = MixedClass.OriginalConstructor; // WTF was I thinking?
+ 
 
-  // Add inherited() and inheritedAsync() to the prototype
+  // Add getInherited, inherited() and inheritedAsync() to the prototype
   // (only if they are not already there)
+   if( ! ResultClass.prototype.getInherited ) {
+    ResultClass.prototype.getInherited = getInherited;
+  }
   if( ! ResultClass.prototype.inherited ) {
     ResultClass.prototype.inherited = function( args ){
       return inherited.call( this, 'sync', args );
@@ -314,9 +326,75 @@ exports = module.exports = declare;
 
 
 /*
+var A = declare(null, {
+  constructor: function(){
+    console.log("A's constructor");
+  },
+  name: 'A',
+})
+
+var B = declare(null, {
+  constructor: function(){
+    console.log("B's constructor");
+  },
+  name: 'B',
+})
+
+var C = declare( null, { 
+  constructor: function(){
+    console.log("C's constructor");
+  },
+  name: 'C',
+})
+
+var D = declare( null, { 
+  constructor: function(){
+    console.log("D's constructor");
+  },
+  name: 'D',
+})
+
+var I1 = function(){ console.log("I1's constructor!");}
+I1.prototype.name = "I1";
+
+var I2 = function(){ console.log("I2's constructor!");}
+I2.prototype.name = "I2";
+
+var I3 = function(){ console.log("Calling C straight from I3 hard-coded..."); if( ! arguments.callee.caller.ActualConstructor ) C.prototype.constructor.apply( this. arguments ); console.log("I3's constructor!");  }
+//var I3 = function(){ console.log("I3's constructor!");  }
+//var I3 = function(){ console.log("Calling C straight from I3 hard-coded..."); this.inherited( arguments ); console.log("I3's constructor!");  }
+I3.prototype = Object.create( C.prototype );
+I3.prototype.constructor = I3;
+I3.prototype.name = "I3";
+
+
+
+var R1 = declare( [A, B, I3, D ], { name: 'R1', constructor: function(){ console.log("R1's constructor!"); } });
+
+
+var r1 = new R1();
+
+console.log('--------------------');
+
+
+
+var R2a = declare( I3, { name: 'R2A' } );
+
+console.log( R2a.prototype );
+
+console.log( R2a.prototype.__proto__ );
+console.log( R2a.prototype.__proto__ .__proto__ );
+console.log( R2a.prototype.__proto__ .__proto__.__proto__ );
+
+var r2a = new  R2a();;
+
+
+console.log('--------------------');
+
+
+
 
 var P = declare.extendableObject.extend( { p: 10 });
-debugger;
 
 
 
@@ -325,6 +403,7 @@ var a = new A();
 console.log( "a instanceof A: ", a instanceof A );
 console.log( "a.instanceOf A: ", a.instanceOf( A ) );
 
+console.log('--------------------');
 
 var B = declare( A, { name: 'B', constructor:function(){  console.log("B's constructor"); } } );
 var b = new B();
@@ -333,10 +412,8 @@ console.log("b's proto", b.__proto__);
 
 console.log("b's proto's proto", b.__proto__.__proto__);
 
-debugger;
-
-console.log("b's proto's ActualCtor:", b.__proto__.constructor.ActualCtor ? b.__proto__.constructor.ActualCtor.toString() : "NONE" );
-console.log("b's proto's proto's ActualCtor:", b.__proto__.__proto__.constructor.ActualCtor ? b.__proto__.__proto__.constructor.ActualCtor.toString() : "NONE");
+console.log("b's proto's ActualConstructor:", b.__proto__.constructor.ActualConstructor ? b.__proto__.constructor.ActualConstructor.toString() : "NONE" );
+console.log("b's proto's proto's ActualConstructor:", b.__proto__.__proto__.constructor.ActualConstructor ? b.__proto__.__proto__.constructor.ActualConstructor.toString() : "NONE");
 
 
 //process.exit( 1 );
@@ -359,14 +436,15 @@ function inspectProto( o ){
 
   r.reverse().forEach( function( item ){
     console.log( "\nITEM:" , item.hasOwnProperty( 'name') ? item.name : 'UNKNOWN' );
-    Object.getOwnPropertyNames( item ).forEach( function( k ){
-      var output;
-      var e = item[ k ];
+    console.log( item );
+    //Object.getOwnPropertyNames( item ).forEach( function( k ){
+    //  var output;
+    //  var e = item[ k ];
 
       //if( typeof( e ) === 'function') output = e.toString();
-      output = e && typeof( e ) === 'function' ? '[function]'  : e;
-      console.log( k + ': ' + output);
-    });
+      //output = e && typeof( e ) === 'function' ? '[function]'  : e;
+    //  console.log( k + ': ' , e );
+    //});
 
   });
 }
@@ -374,6 +452,8 @@ function inspectProto( o ){
 
     // Create a BaseClass with a constructor, a method and a class method
     var BaseClass = declare( null, {
+
+      name: 'BaseClass',
 
       // Define the constructor, will initialise `a`
       constructor: function( param ){
@@ -478,6 +558,7 @@ console.log(".................................................");
       name: 'Ba',
       m: function( param, cb ){
         console.log("Ba::m", param );
+        console.log("GET INHERITED: ", this.getInherited().toString() );
         this.inheritedAsync( arguments, function( err, res ){
           console.log( "Parent returned: ", res );
           console.log( "Ba::m is returning 11");
@@ -528,12 +609,11 @@ var D = declare( [ Aa, Ba, Ca ], {
 
 var d = new D();
 d.name = "ME";
-debugger;
 
-//inspectProto( d );
+inspectProto( d );
 
-console.log("TRUE?", d.instanceOf( Z2 ) ); 
-console.log("TRUE?", d instanceof( Aa ) ); 
+console.log("TRUE?", d.instanceOf( Z2 ) );
+console.log("TRUE?", d instanceof( Aa ) );
 
 
 console.log("RUNNING d.m():");
@@ -543,9 +623,8 @@ d.m( "pippo", function( err, res ){
 
 //process.exit( 1 );
 
-
-
     var A = declare( null, {
+      name: 'A',
       m: function( param ){
 
         console.log("A::m", param );
@@ -561,8 +640,8 @@ d.m( "pippo", function( err, res ){
 
     });
 
-    // Note that B doesn't implement m()
     var B = declare( [ A ] , {
+      name: 'B',
       m: function( param ){
         console.log("B::m", param );
         console.log( "Parent returned: ", this.inherited( arguments) );
@@ -572,6 +651,7 @@ d.m( "pippo", function( err, res ){
     } );
 
     var C = declare( B, {
+      name: 'C',
       m: function( param ){
         console.log("C::m", param );
         console.log( "Parent returned: ", this.inherited( arguments) );
@@ -585,7 +665,10 @@ d.m( "pippo", function( err, res ){
 //    var c = new C();
 
 
-var D = declare([ A, B, C ]);
+console.log("LOOOK");
+debugger;
+
+var D = declare([ A, B, C ], { name: 'D' } );
 var d = new D();
 console.log("RUNNING d.m():", d.m("pippo"));
 
@@ -737,7 +820,7 @@ b1.m( 'pippo', function( err, result ){
       });
     }
 
-
+    console.log("instanceof B1:", d1 instanceof( B1 ) );
     console.log("instanceof B2:", d1 instanceof( B2 ) );
     console.log("instanceof B3:", d1 instanceof( B3 ) );
     console.log("instanceof D1:", d1 instanceof( D1 ) );
@@ -759,9 +842,9 @@ b1.m( 'pippo', function( err, result ){
 
 
     var A = declare( null, {
+      name: 'A',
       m: function( param ){
 
-        console.log("A::m", param );
         console.log( "A::m is returning 10");
         return 10;
       }
@@ -769,18 +852,17 @@ b1.m( 'pippo', function( err, result ){
 
     // Note that B doesn't implement m()
     var B = declare( A, {
+      name: 'B',
       m: function( param ){
-        console.log("B::m", param );
         this.inherited( arguments );
-        console.log( this.inherited( arguments) );
         console.log( "B::m is returning 11");
         return 11;
       }
     } );
 
     var C = declare( B, {
+      name: 'C',
       m: function( param ){
-        console.log("C::m", param );
         console.log( this.inherited( arguments) );
         console.log( "C::m is returning 12");
         return 12;
@@ -812,6 +894,7 @@ b1.m( 'pippo', function( err, result ){
     console.log( "Returned: ", c.m('pluto' ) );
 
     var Aa = declare( null, {
+      name: 'Aa',
       m: function( param, cb ){
         console.log("Aa::m", param );
         cb( null, 10 );
@@ -819,6 +902,7 @@ b1.m( 'pippo', function( err, result ){
     });
 
     var Ba = declare( Aa, {
+      name: 'Ba',
       m: function( param, cb  ){
         console.log("Ba::m", param );
         this.inheritedAsync( arguments, function( err, res ){
@@ -831,6 +915,7 @@ b1.m( 'pippo', function( err, result ){
 
 
     var Ca = declare( Ba, {
+      name: 'Ca',
       m: function( param, cb  ){
         console.log("Ca::m", param );
         this.inheritedAsync( arguments, function( err, res ){
@@ -861,6 +946,7 @@ b1.m( 'pippo', function( err, result ){
     // Create a BaseClass with a constructor, a method and a class method
     var BaseClass = declare( null, {
 
+      name: "BaseClass",
       // Define the constructor, will initialise `a`
       constructor: function( param ){
 
@@ -909,6 +995,8 @@ b1.m( 'pippo', function( err, result ){
     // incrementing `a`. It also defines assignD()
 
     var DerivedClass = declare( BaseClass, {
+
+      name: 'DerivedClass',
 
       // Define the constructor. Note that this will be called _after_ BaseClass' constructor
       constructor: function( p ){
@@ -982,6 +1070,7 @@ b1.m( 'pippo', function( err, result ){
 
     var Mixin = declare( null, {
 
+      name: "Mixin",
       // Define the constructor. Will change `a` even more
       constructor: function( p ){
 
@@ -1016,7 +1105,7 @@ b1.m( 'pippo', function( err, result ){
     console.log("\nCreating mixedObject1:");
     var MixedClass1 = declare( [ BaseClass, Mixin ] );
 
-    MixedClass1 = declare( [ MixedClass1, declare( null ), declare( null ) ]);
+    MixedClass1 = declare( [ MixedClass1, declare( null ), declare( null ) ], { name: "MixedClass1" } );
 
 
     var mixedObject1 = new MixedClass1( 10 );
@@ -1026,7 +1115,7 @@ b1.m( 'pippo', function( err, result ){
     console.log( mixedObject1 );
 
     console.log("\nCreating mixedObject2:");
-    var MixedClass2 = declare( [ DerivedClass, Mixin ] );
+    var MixedClass2 = declare( [ DerivedClass, Mixin ], { name: 'MixedClass2' } );
     var mixedObject2 = new MixedClass2( 10 );
     mixedObject2.assignB( 50 );
     console.log( "MIXED OBJECT 2 (WITH DERIVED):");
@@ -1038,7 +1127,7 @@ b1.m( 'pippo', function( err, result ){
     // Never inherits twice from the same class...
     // In this example, BaseClass' constructor in invoked TWICE.
      console.log("\nCreating mixedObject3 (the tangled one)")
-    var MixedClass3 = declare( [ MixedClass2, BaseClass ] );
+    var MixedClass3 = declare( [ MixedClass2, BaseClass ], { name: 'MixedClass3' } );
     var mixedObject3 = new MixedClass3( 10 );
     console.log( "MIXED OBJECT 3 (WITH TANGLED CLASSES):");
     console.log( mixedObject3 );
@@ -1049,6 +1138,7 @@ b1.m( 'pippo', function( err, result ){
 
 var A = declare( null, {
 
+  name: 'A',
   constructor: function(){
     console.log("A's constructor called");
   },
@@ -1064,6 +1154,7 @@ var A = declare( null, {
 });
 
 var AA = declare( A, {
+  name: 'AA',
   m2: function(){
     console.log("AA > m2");
 
@@ -1076,6 +1167,7 @@ console.log("aa instanceof A:", aa instanceof A );
 
 var B = declare( null, {
 
+  name: 'B',
   constructor: function(){
     console.log("B's constructor called");
   },
@@ -1092,6 +1184,7 @@ var B = declare( null, {
 
 var C = declare( null, {
 
+  name: 'C',
   constructor: function(){
     console.log("C's constructor called");
   },
@@ -1108,6 +1201,7 @@ var C = declare( null, {
 
 
 var ABC = declare( [A,B,C], {
+  name: "ABC",
   m1: function( arg ){
     console.log("ABC > m, argument: ", arg );
 
@@ -1121,6 +1215,5 @@ var ABC = declare( [A,B,C], {
 var abc = new ABC();
 var r = abc.m1( 'pippo');
 console.log("RESULT:", r );
-
 
 */
