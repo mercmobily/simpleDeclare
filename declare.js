@@ -15,9 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   TODO:
     * CRUCIAL: Rewrite documentation
     * CRUCIAL: Write tests
-    * PERFORMANCE: Add memoization to inherited()
-    * PERFORMANCE: Get rid of forEach()es and use cycles instead
-    * MAYBE: Place 'bases', 'ActualConstructor', OriginalConstructor' in 'meta'
+    * IFPOSSIBLE: Add memoization to getObjectBase()
 */
 
 
@@ -63,27 +61,29 @@ var getInherited = function( fn ){
 }
 
 
-// This will become a method call, so `this` is the object
-var inherited = function( type, args, cb ){
+var makeInheritedFunction = function( type ){
 
-  // Get the inherited function
-  var fn = this.getInherited( arguments.callee.caller.caller );
+  // This will become a method call, so `this` is the object
+  return function( args, cb ){
 
-  // No inherited function in the chain, just call the callback (async) or return nothing
-  if( ! fn  ){
-    if( type === 'async' ) return cb.call( this, null );
-    if( type === 'sync' ) return;
-  }
+    // Get the inherited function
+    var fn = this.getInherited( arguments.callee.caller );
 
-  // Call the function. It could be sync or async
-  if( type == 'async' ){
-    var argsMinusCallback = Array.prototype.slice.call(args, 0, -1 ).concat( cb )
-    return fn.apply( this, argsMinusCallback );
-  } else {
-    return fn.apply( this, args );
-  }
-};
+    // No inherited function in the chain, just call the callback (async) or return nothing
+    if( ! fn  ){
+      if( type === 'async' ) return cb.call( this, null );
+      if( type === 'sync' ) return;
+    }
 
+    // Call the function. It could be sync or async
+    if( type == 'async' ){
+      var argsMinusCallback = Array.prototype.slice.call(args, 0, -1 ).concat( cb )
+      return fn.apply( this, argsMinusCallback );
+    } else {
+      return fn.apply( this, args );
+    }
+  };
+}
 
 // This will be added as a Constructor-wide method
 // of constructor created with simpleDeclare (only if needed)
@@ -101,7 +101,7 @@ var extend = function( SuperCtor, protoMixin ){
   // Make up finalSuperCtorArray according to it.
   var finalSuperCtorArray = [ this ];  
   if( Array.isArray( SuperCtor ) ){  
-    SuperCtor.forEach( function( Ctor ){ finalSuperCtorArray.push( Ctor ); } );
+    for( var i = 0, l = SuperCtor.length; i < l; i ++ ) finalSuperCtorArray.push( SuperCtor[ i ] ); 
   } else if( typeof( SuperCtor ) === 'function' ) {
     finalSuperCtorArray.push( SuperCtor );
   } else {
@@ -165,8 +165,6 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
     constructor: {
       value: ReturnedCtor,
       enumerable: false,
-      enumerable: true,
-
       writable: true,
       configurable: true
     },
@@ -181,7 +179,6 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
   //   * from the source of protoMixin, in cases where SourceOfProto is defined
   //     (which means that we are taking it from the SourceOfProto, since the goal
   //      is to mimic it completely creating a working copy of the original constructor)
-
   var ownProps = Object.getOwnPropertyNames( protoMixin );
   for( var i = 0, l = ownProps.length; i < l; i ++ ){
     var k = ownProps[ i ];
@@ -218,13 +215,14 @@ var copyClassMethods = function( Source, Dest ){
   if( Source !== null && Source !== Object ){
 
     var ownProps = Object.getOwnPropertyNames( Source );
-    ownProps.forEach( function( property ) {
-      // It's one of the attriutes' in Function()'s prototype: skip
-      if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) return;
+    for( var i = 0, l = ownProps.length; i < l; i ++){
+      var property = ownProps[ i ];
+      // It's one of the attributes' in Function()'s prototype: skip
+      if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) continue;
       // It's one of the attributes managed by simpleDeclare: skip
-      if( [ 'ActualConstructor', 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) return;
+      if( [ 'ActualConstructor', 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) continue;
       Dest[ property ] = Source[ property ];
-    });
+    };
   }
 }
 
@@ -245,24 +243,28 @@ var declare = function( SuperCtorList, protoMixin ){
   // Object
   var MixedClass = SuperCtorList[ 0 ] || Object;
 
+  // NOW:
+  // Go through every __proto__ of every derivative class, and augment
+  // MixedClass by inheriting from A COPY OF each one of them.
 
-  // Enrich MixedClass inheriting from itself, adding SuperCtor.prototype and
-  // adding class methods
-
-  // The class is inheriting from more than one class: it will go through
-  // every __proto__ of every derivative class, and will augment MixedClass by
-  // inheriting from A COPY OF each one of them.
   // Class-wide functions are copied over for each iteration
   for( var i = 1, l = SuperCtorList.length; i < l; i ++ ){
     var proto;
 
+    // Get the prototype list, in the right order
+    // (the reversed discovery order)
     proto = SuperCtorList[ i ].prototype;
     var list = [];
     while( proto ){
       list.push( proto );
       proto = proto.__proto__;
     };
-    list.reverse().forEach( function( proto ){
+    var listReversed = list.reverse();  
+
+    // For each element in the prototype list that isn't Object() or null,
+    // inherit from that too
+    for( var ii = 0, ll = listReversed.length; ii < ll; ii ++ ){
+      var proto = listReversed[ ii ];
 
       var M = MixedClass;
 
@@ -273,7 +275,7 @@ var declare = function( SuperCtorList, protoMixin ){
 
         copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
       }
-    })
+    }
   };
 
   // Finally, inherit from the MixedClass, and add
@@ -281,23 +283,17 @@ var declare = function( SuperCtorList, protoMixin ){
   var ResultClass = makeConstructor( MixedClass, protoMixin );
 
   copyClassMethods( MixedClass, ResultClass );
-  // if( MixedClass.hasOwnProperty('OriginalConstructor') ) ResultClass.OriginalConstructor = MixedClass.OriginalConstructor; // WTF was I thinking?
  
-
   // Add getInherited, inherited() and inheritedAsync() to the prototype
   // (only if they are not already there)
    if( ! ResultClass.prototype.getInherited ) {
     ResultClass.prototype.getInherited = getInherited;
   }
   if( ! ResultClass.prototype.inherited ) {
-    ResultClass.prototype.inherited = function( args ){
-      return inherited.call( this, 'sync', args );
-    }
+    ResultClass.prototype.inherited = makeInheritedFunction( 'sync' );
   }
   if( ! ResultClass.prototype.inheritedAsync ) {  
-    ResultClass.prototype.inheritedAsync = function( args, cb ){
-      return inherited.call( this, 'async', args, cb );
-    }
+    ResultClass.prototype.inheritedAsync = makeInheritedFunction( 'async' );
   }
 
   // Add instanceOf
@@ -337,7 +333,8 @@ exports = module.exports = declare;
 
 
 
-/*
+
+
 var A = declare(null, {
   constructor: function(){
     console.log("A's constructor");
@@ -1227,5 +1224,3 @@ var ABC = declare( [A,B,C], {
 var abc = new ABC();
 var r = abc.m1( 'pippo');
 console.log("RESULT:", r );
-
-*/
