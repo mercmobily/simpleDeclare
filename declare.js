@@ -1,322 +1,320 @@
 "use NONstrict";
-/*
-Copyright (C) 2015 Tony Mobily
+    /*
+    Copyright (C) 2015 Tony Mobily
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-
-
-/*
-
-  TODO:
-    * CRUCIAL: Rewrite documentation
-    * CRUCIAL: Write tests
-    * IFPOSSIBLE: Add memoization to getObjectBase()
-*/
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    */
 
 
-function getObjectBase( o, fn ){
+    /*
 
-  var found = false, currentPoint = o;
+      TODO:
+        * CRUCIAL: Rewrite documentation
+        * CRUCIAL: Write tests
+        * IFPOSSIBLE: Add memoization to getObjectBase()
+    */
 
-  while( currentPoint ){
 
-    var objMethods = Object.getOwnPropertyNames( currentPoint );
-    for( var i = 0, l = objMethods.length; i < l; i ++ ){
-      var k = objMethods[ i ];
+    function getObjectBase( o, fn ){
 
-      if( currentPoint.hasOwnProperty( k ) && currentPoint[ k ] === fn ){
-        found = true;
-        break;
+      var found = false, currentPoint = o;
+
+      while( currentPoint ){
+
+        var objMethods = Object.getOwnPropertyNames( currentPoint );
+        for( var i = 0, l = objMethods.length; i < l; i ++ ){
+          var k = objMethods[ i ];
+
+          if( currentPoint.hasOwnProperty( k ) && currentPoint[ k ] === fn ){
+            found = true;
+            break;
+          }
+        };
+        // If found, break out of the cycle. Otherwise, keep looking in the next proto up
+        if( found ) break;
+        currentPoint = currentPoint.__proto__;
       }
-    };
-    // If found, break out of the cycle. Otherwise, keep looking in the next proto up
-    if( found ) break;
-    currentPoint = currentPoint.__proto__;
-  }
 
-  // If nothing was found, return null
-  return { base: currentPoint, key: k };
-}
-
-// This will become a method call, so `this` is the object
-var getInherited = function( fn ){
-
-  if( ! fn ) fn = arguments.callee.caller;
-
-  // Get the object's base 
-  var objectBase = getObjectBase( this, fn );
-
-  // If the function is not found anywhere in the prototype chain
-  // there is a pretty big problem
-  if( ! objectBase.base ) throw new Error( "inherited coun't find method in chain (getInherited)" );
-
-  // At this point, I know the key. To look for the super method, I
-  // only have to check if one of the parent __proto__ has a matching key `k`
-  return objectBase.base.__proto__[ objectBase.key ]; 
-}
-
-
-var makeInheritedFunction = function( type ){
-
-  // This will become a method call, so `this` is the object
-  return function( args, cb ){
-
-    // Get the inherited function
-    var fn = this.getInherited( arguments.callee.caller );
-
-    // No inherited function in the chain, just call the callback (async) or return nothing
-    if( ! fn  ){
-      if( type === 'async' ) return cb.call( this, null );
-      if( type === 'sync' ) return;
+      // If nothing was found, return null
+      return { base: currentPoint, key: k };
     }
 
-    // Call the function. It could be sync or async
-    if( type == 'async' ){
-      var argsMinusCallback = Array.prototype.slice.call(args, 0, -1 ).concat( cb )
-      return fn.apply( this, argsMinusCallback );
-    } else {
-      return fn.apply( this, args );
-    }
-  };
-}
+    // This will become a method call, so `this` is the object
+    var getInherited = function( fn ){
 
-// This will be added as a Constructor-wide method
-// of constructor created with simpleDeclare (only if needed)
-var extend = function( SuperCtor, protoMixin ){
+      if( ! fn ) fn = arguments.callee.caller;
 
-  // Only one argument was passed and it's an object: it's protoMixin.
-  // So, just return declare with `this` as base class and protoMixin
-  if( arguments.length === 1 ){
+      // Get the object's base 
+      var objectBase = getObjectBase( this, fn );
 
-    if( typeof( SuperCtor ) === 'object' && SuperCtor !== null ) return declare( [ this ], SuperCtor );
-    else protoMixin = {};
-  }
-  
-  // SuperCtor is is either a constructor function, or an array of constructor functions
-  // Make up finalSuperCtorArray according to it.
-  var finalSuperCtorArray = [ this ];  
-  if( Array.isArray( SuperCtor ) ){  
-    for( var i = 0, l = SuperCtor.length; i < l; i ++ ) finalSuperCtorArray.push( SuperCtor[ i ] ); 
-  } else if( typeof( SuperCtor ) === 'function' ) {
-    finalSuperCtorArray.push( SuperCtor );
-  } else {
-    throw new Error( "SuperCtor parameter illegal in declare (via extend)");
-  }
+      // If the function is not found anywhere in the prototype chain
+      // there is a pretty big problem
+      if( ! objectBase.base ) throw new Error( "inherited coun't find method in chain (getInherited)" );
 
-  return declare( finalSuperCtorArray, protoMixin );
-}
-
-
-// Look for Ctor.prototype anywhere in the __proto__ chain.
-// Unlike Javascript's plain instanceof, this method attempts
-// to compare 
-var instanceOf = function( Ctor ){
-
-  var searchedProto = Ctor.prototype;
-  var current = this;
-  var compare;
-
-  while( current = current.__proto__){
-
-    // It will compare either with OriginalConstructor.prototype or plain prototype
-    compare = current.constructor.OriginalConstructor ?
-              current.constructor.OriginalConstructor.prototype :
-              current.constructor.prototype;
-
-    // Actually run the comparison
-    if( compare === searchedProto ) return true;
-  }
-  return false;
-}
-  
-var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
-
-  // The constructor that will get returned. It's basically a function
-  // that calls the parent's constructor and then protoMixin.constructor.
-  // It works with plain JS constructor functions (as long as they have,
-  //  as they SHOULD, `prototype.constructor` set)
-  var ReturnedCtor = function(){
-
-    // Run the parent's constructor if present
-    if( ReturnedCtor.prototype.__proto__  && ReturnedCtor.prototype.__proto__.constructor !== Object ){
-      ReturnedCtor.prototype.__proto__.constructor.apply( this, arguments );
+      // At this point, I know the key. To look for the super method, I
+      // only have to check if one of the parent __proto__ has a matching key `k`
+      return objectBase.base.__proto__[ objectBase.key ]; 
     }
 
-    // The stock constructor will simply run `ActualConstructor` if it's found.
-    if( ReturnedCtor.hasOwnProperty( 'ActualConstructor' ) ){
-      ReturnedCtor.ActualConstructor.apply( this, arguments );
+
+    var makeInheritedFunction = function( type ){
+
+      // This will become a method call, so `this` is the object
+      return function( args, cb ){
+
+        // Get the inherited function
+        var fn = this.getInherited( arguments.callee.caller );
+
+        // No inherited function in the chain, just call the callback (async) or return nothing
+        if( ! fn  ){
+          if( type === 'async' ) return cb.call( this, null );
+          if( type === 'sync' ) return;
+        }
+
+        // Call the function. It could be sync or async
+        if( type == 'async' ){
+          var argsMinusCallback = Array.prototype.slice.call(args, 0, -1 ).concat( cb )
+          return fn.apply( this, argsMinusCallback );
+        } else {
+          return fn.apply( this, args );
+        }
+      };
     }
 
-  };
+    // This will be added as a Constructor-wide method
+    // of constructor created with simpleDeclare (only if needed)
+    var extend = function( SuperCtor, protoMixin ){
 
-  if( protoMixin === null ) protoMixin = {};
-  if( typeof( protoMixin ) !== 'object' ) protoMixin = {};
-  
-  // Create the new function's prototype. It's a new object, which happens to
-  // have its own prototype (__proto__) set as the superclass' prototype and the
-  // `constructor` attribute set as FromCtor (the one we are about to return)
+      // Only one argument was passed and it's an object: it's protoMixin.
+      // So, just return declare with `this` as base class and protoMixin
+      if( arguments.length === 1 ){
 
-  ReturnedCtor.prototype = Object.create(FromCtor.prototype, {
-    constructor: {
-      value: ReturnedCtor,
-      enumerable: false,
-      writable: true,
-      configurable: true
-    },
-  });
+        if( typeof( SuperCtor ) === 'object' && SuperCtor !== null ) return declare( [ this ], SuperCtor );
+        else protoMixin = {};
+      }
+      
+      // SuperCtor is is either a constructor function, or an array of constructor functions
+      // Make up finalSuperCtorArray according to it.
+      var finalSuperCtorArray = [ this ];  
+      if( Array.isArray( SuperCtor ) ){  
+        for( var i = 0, l = SuperCtor.length; i < l; i ++ ) finalSuperCtorArray.push( SuperCtor[ i ] ); 
+      } else if( typeof( SuperCtor ) === 'function' ) {
+        finalSuperCtorArray.push( SuperCtor );
+      } else {
+        throw new Error( "SuperCtor parameter illegal in declare (via extend)");
+      }
 
-  // Copy every element in protoMixin into the prototype.
-  // Note that `constructor` is special: it's _not_ copied over.
-  // Instead, it's placed in ReturnedCtor.ActualConstructor.
-  // It can either come:
-  //   * from protoMixin, in cases where SourceOfProto is not defined
-  //     (which means that it's what the developer passed herself in `protoMixin` as `constructor`)
-  //   * from the source of protoMixin, in cases where SourceOfProto is defined
-  //     (which means that we are taking it from the SourceOfProto, since the goal
-  //      is to mimic it completely creating a working copy of the original constructor)
-  var ownProps = Object.getOwnPropertyNames( protoMixin );
-  for( var i = 0, l = ownProps.length; i < l; i ++ ){
-    var k = ownProps[ i ];
+      return declare( finalSuperCtorArray, protoMixin );
+    }
 
-    if( k !== 'constructor' ) ReturnedCtor.prototype[ k ] = protoMixin[ k ]; 
-  };
 
-  // We are not cloning a constructor, but creating a brand new one (using protoMixin as
-  // a source of methods that just got added to the prototype).
-  // ActualConstructor will be set to the `constructor` property of protoMixin
-  if( ! SourceOfProto ){
-    if( protoMixin.hasOwnProperty( 'constructor' ) ) ReturnedCtor.ActualConstructor = protoMixin.constructor;
-  }
+    // Look for Ctor.prototype anywhere in the __proto__ chain.
+    // Unlike Javascript's plain instanceof, this method attempts
+    // to compare 
+    var instanceOf = function( Ctor ){
 
-  // We are un the process of cloning an existing constructor.
-  // When doing that:
-  // * ReturnedCtor's ActualConstructor will be set to the Source's ActualConstructor.
-  //   This will ensure that the stock constructor (that just invoks ActualConstructor) works.
-  // * ReturnedCtor's OriginalConstructor will be set to the Source's ActualConstructor.
-  //   This will ensure that we have a path to the actual constructor we actually cloned,
-  //   so that instanceOf() will work (by checking ActualConstructor whenever possible)
-  if( SourceOfProto ){
-    if( SourceOfProto.hasOwnProperty('ActualConstructor') ) ReturnedCtor.ActualConstructor = SourceOfProto.ActualConstructor;
-    ReturnedCtor.OriginalConstructor = SourceOfProto;
-  } 
+      var searchedProto = Ctor.prototype;
+      var current = this;
+      var compare;
 
-  // That's it!
-  return ReturnedCtor;
-}
+      while( current = current.__proto__){
 
-var copyClassMethods = function( Source, Dest ){
+        // It will compare either with OriginalConstructor.prototype or plain prototype
+        compare = current.constructor.OriginalConstructor ?
+                  current.constructor.OriginalConstructor.prototype :
+                  current.constructor.prototype;
 
-  // Copy class methods over
-  if( Source !== null && Source !== Object ){
+        // Actually run the comparison
+        if( compare === searchedProto ) return true;
+      }
+      return false;
+    }
+      
+    var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
 
-    var ownProps = Object.getOwnPropertyNames( Source );
-    for( var i = 0, l = ownProps.length; i < l; i ++){
-      var property = ownProps[ i ];
-      // It's one of the attributes' in Function()'s prototype: skip
-      if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) continue;
-      // It's one of the attributes managed by simpleDeclare: skip
-      if( [ 'ActualConstructor', 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) continue;
-      Dest[ property ] = Source[ property ];
-    };
-  }
-}
+      // The constructor that will get returned. It's basically a function
+      // that calls the parent's constructor and then protoMixin.constructor.
+      // It works with plain JS constructor functions (as long as they have,
+      //  as they SHOULD, `prototype.constructor` set)
+      var ReturnedCtor = function(){
 
-var declare = function( SuperCtorList, protoMixin ){
+        // Run the parent's constructor if present
+        if( ReturnedCtor.prototype.__proto__  && ReturnedCtor.prototype.__proto__.constructor !== Object ){
+          ReturnedCtor.prototype.__proto__.constructor.apply( this, arguments );
+        }
 
-  var ResultClass;
+        // The stock constructor will simply run `ActualConstructor` if it's found.
+        if( ReturnedCtor.hasOwnProperty( 'ActualConstructor' ) ){
+          ReturnedCtor.ActualConstructor.apply( this, arguments );
+        }
 
-  // Check that SuperCtorList is the right type
-  if( SuperCtorList !== null && typeof( SuperCtorList ) !== 'function' && !Array.isArray( SuperCtorList ) ){
-    throw new Error( "SuperCtor parameter illegal in declare");
-  }
+      };
 
-  // SuperCtor is null: the array will be an empty list
-  if( SuperCtorList === null ) SuperCtorList = [];
-  if( ! Array.isArray( SuperCtorList ) ) SuperCtorList = [ SuperCtorList ];
+      if( protoMixin === null ) protoMixin = {};
+      if( typeof( protoMixin ) !== 'object' ) protoMixin = {};
+      
+      // Create the new function's prototype. It's a new object, which happens to
+      // have its own prototype (__proto__) set as the superclass' prototype and the
+      // `constructor` attribute set as FromCtor (the one we are about to return)
 
-  // Set the starting point. It's either the first SuperCtor, or
-  // Object
-  var MixedClass = SuperCtorList[ 0 ] || Object;
+      ReturnedCtor.prototype = Object.create(FromCtor.prototype, {
+        constructor: {
+          value: ReturnedCtor,
+          enumerable: false,
+          writable: true,
+          configurable: true
+        },
+      });
 
-  // NOW:
-  // Go through every __proto__ of every derivative class, and augment
-  // MixedClass by inheriting from A COPY OF each one of them.
+      // Copy every element in protoMixin into the prototype.
+      // Note that `constructor` is special: it's _not_ copied over.
+      // Instead, it's placed in ReturnedCtor.ActualConstructor.
+      // It can either come:
+      //   * from protoMixin, in cases where SourceOfProto is not defined
+      //     (which means that it's what the developer passed herself in `protoMixin` as `constructor`)
+      //   * from the source of protoMixin, in cases where SourceOfProto is defined
+      //     (which means that we are taking it from the SourceOfProto, since the goal
+      //      is to mimic it completely creating a working copy of the original constructor)
+      var ownProps = Object.getOwnPropertyNames( protoMixin );
+      for( var i = 0, l = ownProps.length; i < l; i ++ ){
+        var k = ownProps[ i ];
 
-  // Class-wide functions are copied over for each iteration
-  for( var i = 1, l = SuperCtorList.length; i < l; i ++ ){
-    var proto;
+        if( k !== 'constructor' ) ReturnedCtor.prototype[ k ] = protoMixin[ k ]; 
+      };
 
-    // Get the prototype list, in the right order
-    // (the reversed discovery order)
-    proto = SuperCtorList[ i ].prototype;
-    var list = [];
-    while( proto ){
-      list.push( proto );
-      proto = proto.__proto__;
-    };
-    var listReversed = list.reverse();  
+      // We are not cloning a constructor, but creating a brand new one (using protoMixin as
+      // a source of methods that just got added to the prototype).
+      // ActualConstructor will be set to the `constructor` property of protoMixin
+      if( ! SourceOfProto ){
+        if( protoMixin.hasOwnProperty( 'constructor' ) ) ReturnedCtor.ActualConstructor = protoMixin.constructor;
+      }
 
-    // For each element in the prototype list that isn't Object() or null,
-    // inherit from that too
-    for( var ii = 0, ll = listReversed.length; ii < ll; ii ++ ){
-      var proto = listReversed[ ii ];
+      // We are un the process of cloning an existing constructor.
+      // When doing that:
+      // * ReturnedCtor's ActualConstructor will be set to the Source's ActualConstructor.
+      //   This will ensure that the stock constructor (that just invoks ActualConstructor) works.
+      // * ReturnedCtor's OriginalConstructor will be set to the Source's ActualConstructor.
+      //   This will ensure that we have a path to the actual constructor we actually cloned,
+      //   so that instanceOf() will work (by checking ActualConstructor whenever possible)
+      if( SourceOfProto ){
+        if( SourceOfProto.hasOwnProperty('ActualConstructor') ) ReturnedCtor.ActualConstructor = SourceOfProto.ActualConstructor;
+        ReturnedCtor.OriginalConstructor = SourceOfProto;
+      } 
 
-      var M = MixedClass;
+      // That's it!
+      return ReturnedCtor;
+    }
 
-      if( proto.constructor !== Object ){
+    var copyClassMethods = function( Source, Dest ){
 
-        MixedClass = makeConstructor( MixedClass, proto, proto.constructor );    
-        copyClassMethods( M, MixedClass ); // Methods previously inherited
+      // Copy class methods over
+      if( Source !== null && Source !== Object ){
 
-        copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
+        var ownProps = Object.getOwnPropertyNames( Source );
+        for( var i = 0, l = ownProps.length; i < l; i ++){
+          var property = ownProps[ i ];
+          // It's one of the attributes' in Function()'s prototype: skip
+          if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) continue;
+          // It's one of the attributes managed by simpleDeclare: skip
+          if( [ 'ActualConstructor', 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) continue;
+          Dest[ property ] = Source[ property ];
+        };
       }
     }
-  };
 
-  // Finally, inherit from the MixedClass, and add
-  // class methods over
-  var ResultClass = makeConstructor( MixedClass, protoMixin );
+    var declare = function( SuperCtorList, protoMixin ){
 
-  copyClassMethods( MixedClass, ResultClass );
- 
-  // Add getInherited, inherited() and inheritedAsync() to the prototype
-  // (only if they are not already there)
-   if( ! ResultClass.prototype.getInherited ) {
-    ResultClass.prototype.getInherited = getInherited;
-  }
-  if( ! ResultClass.prototype.inherited ) {
-    ResultClass.prototype.inherited = makeInheritedFunction( 'sync' );
-  }
-  if( ! ResultClass.prototype.inheritedAsync ) {  
-    ResultClass.prototype.inheritedAsync = makeInheritedFunction( 'async' );
-  }
+      var ResultClass;
 
-  // Add instanceOf
-  if( ! ResultClass.prototype.instanceOf ) {    
-    ResultClass.prototype.instanceOf = instanceOf;
-  }
+      // Check that SuperCtorList is the right type
+      if( SuperCtorList !== null && typeof( SuperCtorList ) !== 'function' && !Array.isArray( SuperCtorList ) ){
+        throw new Error( "SuperCtor parameter illegal in declare");
+      }
 
-  // Add class-wide method `extend`
-  ResultClass.extend = function( SuperCtor, protoMixin ){
-    return extend.apply( this, arguments );
-  }
+      // SuperCtor is null: the array will be an empty list
+      if( SuperCtorList === null ) SuperCtorList = [];
+      if( ! Array.isArray( SuperCtorList ) ) SuperCtorList = [ SuperCtorList ];
 
-  // That's it!
-  return ResultClass;
-};
+      // Set the starting point. It's either the first SuperCtor, or
+      // Object
+      var MixedClass = SuperCtorList[ 0 ] || Object;
+
+      // NOW:
+      // Go through every __proto__ of every derivative class, and augment
+      // MixedClass by inheriting from A COPY OF each one of them.
+
+      // Class-wide functions are copied over for each iteration
+      for( var i = 1, l = SuperCtorList.length; i < l; i ++ ){
+        var proto;
+
+        // Get the prototype list, in the right order
+        // (the reversed discovery order)
+        proto = SuperCtorList[ i ].prototype;
+        var list = [];
+        while( proto ){
+          list.push( proto );
+          proto = proto.__proto__;
+        };
+        var listReversed = list.reverse();  
+
+        // For each element in the prototype list that isn't Object() or null,
+        // inherit from that too
+        for( var ii = 0, ll = listReversed.length; ii < ll; ii ++ ){
+          var proto = listReversed[ ii ];
+
+          var M = MixedClass;
+
+          if( proto.constructor !== Object ){
+
+            MixedClass = makeConstructor( MixedClass, proto, proto.constructor );    
+            copyClassMethods( M, MixedClass ); // Methods previously inherited
+
+            copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
+          }
+        }
+      };
+
+      // Finally, inherit from the MixedClass, and add
+      // class methods over
+      var ResultClass = makeConstructor( MixedClass, protoMixin );
+
+      copyClassMethods( MixedClass, ResultClass );
+     
+      // Add getInherited, inherited() and inheritedAsync() to the prototype
+      // (only if they are not already there)
+       if( ! ResultClass.prototype.getInherited ) {
+        ResultClass.prototype.getInherited = getInherited;
+      }
+      if( ! ResultClass.prototype.inherited ) {
+        ResultClass.prototype.inherited = makeInheritedFunction( 'sync' );
+      }
+      if( ! ResultClass.prototype.inheritedAsync ) {  
+        ResultClass.prototype.inheritedAsync = makeInheritedFunction( 'async' );
+      }
+
+      // Add instanceOf
+      if( ! ResultClass.prototype.instanceOf ) {    
+        ResultClass.prototype.instanceOf = instanceOf;
+      }
+
+      // Add class-wide method `extend`
+      ResultClass.extend = function( SuperCtor, protoMixin ){
+        return extend.apply( this, arguments );
+      }
+
+      // That's it!
+      return ResultClass;
+    };
 
 
-// Returned extra: declarableObject
-declare.extendableObject = declare( null );
+    // Returned extra: declarableObject
+    declare.extendableObject = declare( null );
 
-exports = module.exports = declare;
-
-
+    exports = module.exports = declare;
 
 
 
@@ -334,6 +332,8 @@ exports = module.exports = declare;
 
 
 
+
+/*
 
 var A = declare(null, {
   constructor: function(){
@@ -1224,3 +1224,4 @@ var ABC = declare( [A,B,C], {
 var abc = new ABC();
 var r = abc.m1( 'pippo');
 console.log("RESULT:", r );
+*/
