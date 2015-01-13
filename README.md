@@ -105,6 +105,8 @@ Here, a `constructor` attribute is passed: it will be called every time a new in
     A's constructor called with parameter: 11
     */
 
+    console.log( b instanceof A ); // => true
+
     b.method1(); // => B::method1() called
 
     console.log( a.__proto__ );
@@ -138,17 +140,117 @@ Note that the attribute `name` is only here so that you can clearly recognise wh
 
 Also note that when running `new B()`, _both_ constructors are run, in the right order. This means that when you define a constructor with simpleDeclare you can rest assured that _every_ initialisation function passed as `constructor` will actually be run (with the parameters passed to B() ).
 
+The `b` variable is recognised as `instanceof`, as it should.
 
-TO DOCUMENT:
+## Calling the super function with `this.inherited()`
 
-* this.inherited()
-* this.inheritedAsync()
-* Simple inheritance with classic Functions (mention calling parent constructor)
-* Simple inheritance using extend()
-* Multiple inheritance (explain that anything after 1st if a mixin, `instanceOf()` )
-* Multiple inheritance using extend()
+A inherited constructor will often redefine a method; you will often want to run the "super" method that was redefined. SimpleDeclare makes this very possible, offering a very robust implementation of `this.inherited()`:
 
-## Simple inheritance from normal Javascript objects
+
+````Javascript
+    var A = declare( null, {
+
+      name: 'A',
+
+      method1: function( parameter ){
+        console.log("A::method1() called")
+      },
+
+      method2: function( parameter ){
+        console.log("A::method2() called")
+      },
+    })
+
+    var B = declare( A, {
+
+      name: 'B',
+ 
+      method1: function( parameter ){
+        console.log("B::method1() called, now calling the 'super' method");
+        this.inherited( arguments );
+      }
+    })
+
+    var b = new B();
+
+    b.method2(); // => B::method2() called
+
+    b.method1();
+    /* =>
+    B::method1() called, now calling the 'super' method
+    A::method1() called
+    */
+````    
+
+The `this.inherited()` method is available to any object created by a SimpleDeclare constructor. It accepts an array of values, representing the parameters to pass to the super function. Its implementation is very fast (the only CPU-intensive operation is looking for the method itself in the object's own list of prototypes). When ECMA 6, doing this will be trivial.  
+
+## Calling the super function which follows callback patterns with `this.inheritedAsync()`
+
+Calling the super function is just a matter of typing `this.inherited(arguments)`. What if the super function is a node-style async method that accepts a callback as its last parameter? Simple:
+
+
+````Javascript
+  var A = declare( null, {
+
+      name: 'A',
+
+      method1: function( parameter, cb ){
+        console.log( "A::method1() called, parameter: ", parameter );
+        cb( null, "Returned by A::method1" );
+      },
+
+      method2: function( parameter, cb ){
+        console.log("A::method2() called, parameter: ", parameter );
+        cb( null, "Returned by A::method2" );
+      },
+    })
+
+    var B = declare( A, {
+
+      name: 'B',
+ 
+      method1: function( parameter, cb ){
+        console.log( "B::method1() called with parameter: ", parameter );
+        console.log( "Now calling inherited method...");
+        this.inheritedAsync( arguments, function( err, res ){
+
+          // Error in the inherited function: propagate err, node style
+          if( err ) return cb( err );
+
+          console.log( "Parent function returned:", res );
+          cb( null, "Returned by B::method1" );
+        });
+      }
+    })
+
+    var b = new B();
+
+    
+    b.method1( 'test parameter', function( err, res ){
+      /* =>
+      B::method1() called with parameter:  test parameter
+      Now calling inherited method...
+      A::method1() called, parameter:  test parameter
+      Parent function returned: Returned by A::method1
+      */
+
+      console.log( "b.method 1 returned:", res );
+      /* =>
+      b.method 1 returned: Returned by B::method1
+      */
+    });
+````    
+
+`B::method1()` follows Node's callback standards: the last parameter is a callback, which is expected to be called with two parameters: `err` (an Error object if there was an error) and the returned value.
+
+The `this.inheritedAsync()` function accepts two arguments: the `arguments` array, and a new callback. What will actually happen, is that the super method will be called by `inheritedAsync()` with a modified version of `arguments`: a version where the last parameter is changed to the new callback.
+
+This is the easiest possible way to override node-style methods.
+
+# DOCUMENTATION ENDS HERE. THE REST IS ONLY SKETCHED.
+
+## Inheriting from "pure" constructor functions
+
 
 ````Javascript
   var A = function(){
@@ -159,15 +261,27 @@ TO DOCUMENT:
   }
 ````
 
-# DOCUMENTATION REWRITE ENDS HERE
+# Simple inheritance using `extend()`
 
+# Multiple inheritance
 
-````Javascript
-````
-
-````Javascript
-````
+You can easily inherit from multiple constructors:
 
 ````Javascript
+
+
 ````
+
+When doing this, note that:
+
+
+### Only the first element in the declare list will be inherited in "classical" terms.
+
+`instanceof` will work only for the first element. The others will be cloned.
+
+###  SimpleDeclare will only allow to inherit from a constructor once
+
+
+# Multiple inheritance using `extend()`
+
 
