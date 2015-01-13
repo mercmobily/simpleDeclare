@@ -184,7 +184,7 @@ A inherited constructor will often redefine a method; you will often want to run
 
 The `this.inherited()` method is available to any object created by a SimpleDeclare constructor. It accepts an array of values, representing the parameters to pass to the super function. Its implementation is very fast (the only CPU-intensive operation is looking for the method itself in the object's own list of prototypes). When ECMA 6, doing this will be trivial.  
 
-## Calling the super function which follows callback patterns with `this.inheritedAsync()`
+## Calling the super function with node-style callback
 
 Calling the super function is just a matter of typing `this.inherited(arguments)`. What if the super function is a node-style async method that accepts a callback as its last parameter? Simple:
 
