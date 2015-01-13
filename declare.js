@@ -271,7 +271,6 @@ var declare = function( SuperCtorList, protoMixin ){
   // Go through every __proto__ of every derivative class, and augment
   // MixedClass by inheriting from A COPY OF each one of them.
 
-
   // Class-wide functions are copied over for each iteration
   var list = [];
   for( var i = 1, l = SuperCtorList.length; i < l; i ++ ){
@@ -289,16 +288,17 @@ var declare = function( SuperCtorList, protoMixin ){
     subList = subList.reverse();
 
     // Add each element of sublist as long as it's not already in the main `list`
-    // If it's already in `list`, it means it had already been inherited, at some point
-    // before
     for( var ii = 0, ll = subList.length; ii < ll; ii ++ ){
       if( ! constructorAlreadyInList( subList[ ii ].constructor, list ) ) list.push( subList[ ii ] );
     }
   }
 
   // Set the starting point. If it's Object, there is no need to check anything.
-  // Otherwise check that the first constructor is not already in the list -- if it is, the
-  // derivative object will be forced to inherit from Object
+  // Otherwise check that the first constructor is not already in the list
+  // NOTE: FirstConstructor MUST not be in the list, because if it is, then the object
+  // would inherit TWICE from the same constructor (the "real" one, FirstConstructor, and
+  // thedeep mixin copy created above) which will potentially lead to even more duplication
+  // (in case for example FirstConstructor inherits from more methods then mixed in)
   if( FirstConstructor === Object ){
     MixedClass = Object;
   } else {
@@ -306,7 +306,7 @@ var declare = function( SuperCtorList, protoMixin ){
     else MixedClass = Object;
   }
  
-  // For each element in the prototype list that isn't Object() or null,
+  // For each element in the prototype list that isn't Object(),
   // inherit from that too
   for( var ii = 0, ll = list.length; ii < ll; ii ++ ){
     var proto = list[ ii ];
@@ -359,14 +359,17 @@ declare.extendableObject = declare( null );
 
 exports = module.exports = declare;
 
+
+
+
+
+
+
+
+
+
+
 /*
-
-
-
-
-
-
-
 function inspectProto( o ){
   var r = [];
 
@@ -436,7 +439,7 @@ function inspectProto( o ){
 
 
     var T = declare( [ A, B, C ], { name: 'T' });
-    var M = declare( [Z, T, A, B, C ], { name: 'M' });
+    var M = declare( [ Z, T, A, B, C ], { name: 'M' });
 
 
 
@@ -1356,5 +1359,4 @@ var ABC = declare( [A,B,C], {
 var abc = new ABC();
 var r = abc.m1( 'pippo');
 console.log("RESULT:", r );
-
 */
