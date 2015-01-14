@@ -1,4 +1,4 @@
-"use strict";
+"use NOstrict";
 /*
 Copyright (C) 2013 Tony Mobily
 
@@ -132,7 +132,7 @@ var tests = {
 
     var DerivedClass = declare( BaseClass, {
       assignA: function assignA( a ){
-        var r = this.inherited( assignA, arguments );
+        var r = this.inherited( arguments );
         this.a ++;
         return ++r;
       },
@@ -160,7 +160,7 @@ var tests = {
     var DerivedClass2 = declare( DerivedClass1, {
 
       assignA: function assignA( a ){
-        this.inherited( assignA, [ a + 1 ] );
+        this.inherited( [ a + 1 ] );
       },
     });
 
@@ -178,7 +178,7 @@ var tests = {
     var DerivedClass = declare( BaseClass, {
 
       asyncMethod: function asyncMethod( p1, p2, done ){
-        this.inheritedAsync( asyncMethod, arguments, function( err, res ){
+        this.inheritedAsync( arguments, function( err, res ){
           done( null, res + 1 );
         });
       },
@@ -206,7 +206,7 @@ var tests = {
       },
 
       assignA: function assignA( p ){
-        var r = this.inherited( assignA, arguments );
+        var r = this.inherited( arguments );
         this.a = this.a + 2;
         return r + 2;
       },
