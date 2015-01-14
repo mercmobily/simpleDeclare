@@ -435,7 +435,7 @@ exports = module.exports = declare;
 
 
 
-
+/*
 
 
 function inspectProto( o ){
@@ -1434,3 +1434,4 @@ var ABC = declare( [A,B,C], {
 var abc = new ABC();
 var r = abc.m1( 'pippo');
 console.log("RESULT:", r );
+*/
