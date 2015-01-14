@@ -389,7 +389,7 @@ You can easily inherit from multiple constructors:
   console.log( aa.instanceOf( A3 ) ); // => true
 ````
 
-Note that when you use multiple inheritance (that is, when the first parameter passed to declare is an array, and the array has more than 1 element), the resulting constructor AA won't have `A1`, `A2` and `A3` in its prototype chain, but _copies_ of them. This means that Javascript's native `instanceof` will not work -- you will have to use the object's `instanceOf()` method instead.
+Note that when you use multiple inheritance (that is, when the first parameter passed to declare is an array, and the array has more than 1 element), the resulting constructor `AA` won't have `A1`, `A2` and `A3` in its prototype chain, but _copies_ of them. This means that Javascript's native `instanceof` will not work -- you will have to use the object's `instanceOf()` method instead.
 
 It's important to remember that you are only dealing with copies, especially if you expect `AA`'s behaviour to change if you chance `A1`'s own prototype (which won't happen, as `AA` only ha a _copy_ of `A1`).
 
@@ -538,6 +538,7 @@ However, something needs to be said about calling the parent's constructor. As I
 
 You can use `extend()` for multiple inheritance too. For example:
 
+````Javascript
 var M1 = declare( null, {
       name: 'M1',
       method1: function( parameter ){
@@ -593,6 +594,7 @@ var M1 = declare( null, {
     A
     undefined
     */
+````
 
 Note that `B` will be based on an object that can be seen as `A` plus `M1` plus `M2`.
 
@@ -612,6 +614,7 @@ This is a function that is attached to each constructor returned. This allows yo
 
 When declaring a constructor, you can pass a `constructor` parameter with initialisation code:
 
+````Javascript
     var A = declare( null, {
       constructor: function(){
         this.something = 10;
@@ -623,6 +626,7 @@ When declaring a constructor, you can pass a `constructor` parameter with initia
       this.something = 10;
     }
     */
+````
 
 So, `A.ActualConstructor` will have the function passed as `constructor`. When running `a = new A()`, you are actually running a stock function that will run all constructors in the prototype chain, starting from the innermost one and moving all the way out. The stock function is smart about this: it will run this cycle only when it's being called directly as the actual constructor. In any other cases, it will run ActualConstructor.
 
