@@ -311,38 +311,10 @@ Note that I made sure that `B` behaves like a good citizen, and invokes `A's` co
 
 # Simple inheritance using `extend()`
 
-
-
-# Multiple inheritance
-
-You can easily inherit from multiple constructors:
+Each constructor returned by SimpleDeclare comes with an `extend` method that allows you to extend it.
+For example:
 
 ````Javascript
-
-
-````
-## Vanilla constructors and multiple inheritance
-
-
-
-# Multiple inheritance using `extend()`
-
-
-
-
-
-## (Not much) Under the hood
-
-SimpleDeclare works with Javascript as much as possible. There is only a small level of trickery used to make things work.
-
-### Attributes to returned constructors
-
-Each constructor has the following attributes:
-
-#### `extend`
-
-This is a function that is attached to each constructor returned. This allows you to write this:
-
     var A = declare( null, {
       method: function(){
         console.log( "Hello" );
@@ -354,6 +326,224 @@ This is a function that is attached to each constructor returned. This allows yo
         console.log( "A MUCH BETTER hello!" );
       }
     })
+````
+
+# Multiple inheritance
+
+You can easily inherit from multiple constructors:
+
+````Javascript
+   var A1 = declare( null, {
+      name: 'A1',
+      method1: function( parameter ){
+        console.log( "A1::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by A1::method1";
+      },
+    });
+
+   var A2 = declare( null, {
+      name: 'A2',
+      method1: function( parameter ){
+        console.log( "A2::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by A2::method1";
+      },
+    });
+
+   var A3 = declare( null, {
+      name: 'A3',
+      method1: function( parameter ){
+        console.log( "A3::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by A3::method1";
+      },
+    });
+
+   var AA = declare( [ A1, A2, A3 ], {
+      name: 'AA',
+      method1: function( parameter ){
+        console.log( "AA::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by AA::method1";
+      },
+   })
+
+  var aa = new AA();
+  aa.method1( 10 );
+  /* =>
+  AA::method1() called, parameter:  10
+  A3::method1() called, parameter:  10
+  A2::method1() called, parameter:  10
+  A1::method1() called, parameter:  10
+  */
+
+  console.log( aa instanceof A1 ); // => false
+  console.log( aa instanceof A2 ); // => false
+  console.log( aa instanceof A3 ); // => false
+
+  console.log( aa.instanceOf( A1 ) ); // => true
+  console.log( aa.instanceOf( A2 ) ); // => true
+  console.log( aa.instanceOf( A3 ) ); // => true
+````
+
+Note that when you use multiple inheritance (that is, when the first parameter passed to declare is an array, and the array has more than 1 element), the resulting constructor AA won't have `A1`, `A2` and `A3` in its prototype chain, but _copies_ of them. This means that Javascript's native `instanceof` will not work -- you will have to use the object's `instanceOf()` method instead.
+
+It's important to remember that you are only dealing with copies, especially if you expect `AA`'s behaviour to change if you chance `A1`'s own prototype (which won't happen, as `AA` only ha a _copy_ of `A1`).
+
+This is very rarely a problem (if ever). In fact, it can be considered a bonus in case you want to make prototype-specific changes to `AA` and want to rest assured that none of the original constructor's prototypes are actually changed.
+
+# Duplicate base constructors and multiple inheritance
+
+When using multiple inheritance, SimpleDeclare will never allow you to have a the same constructor twice in the prototype chain. The results of it could potentially be catastrophic (loops when calling `this.inherited()` or when running the constructors, or methods called twice, etc.).
+
+When using multiple inheritance, SimpleDeclare will:
+
+* for each `constructor` to inherit from (first parameter of `declare()`):
+ * make a  flattened list `subList` of _all_ prototypes found in the prototype chain of the constructor, ordered from the deepest to the outest
+ * add each element of `subList` to `masterList` _if it's not already there_
+* create a new constructor with a prototype chain matching `masterList`, crearing copies of the required prototypes to make such a chain
+* use the newly created constructor as the bases for the newly created constructor, which will include the properties in the second parameter passed to `declare()`.
+
+In simple terms, this means that:
+
+* Each passed constructor passed as first parameter to `declare()` is broken down into all if its constructors/prototypes
+* The final object will be a mix of all of these prototypes/constructors, _left to right_
+* If a constructor/prototype was already found, it will not get added again.
+
+Let me explain with some code:
+
+
+
+    var A1 = declare( null, {
+      name: 'A1',
+      method1: function( parameter ){
+        console.log( "A1::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by A1::method1";
+      },
+    });
+
+    var A2 = declare( null, {
+      name: 'A2',
+      method1: function( parameter ){
+        console.log( "A2::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by A2::method1";
+      },
+    });
+
+    var A3 = declare( null, {
+      name: 'A3',
+      method1: function( parameter ){
+        console.log( "A3::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by A3::method1";
+      },
+    });
+
+    var AA = declare( [ A1, A2, A3 ], {
+      name: 'AA', 
+      method1: function( parameter ){
+        console.log( "AA::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by AA::method1";
+      },
+    });
+
+    var B = declare( null, {
+      name: 'B', 
+      method1: function( parameter ){
+        console.log( "B::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by B::method1";
+      },
+    });
+
+
+    var L = declare( null, {
+      name: 'L',
+      method1: function( parameter ){
+        console.log( "L::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by L::method1";
+      },
+    });
+
+    var D = declare( [ A1, A2, B ], {
+      name: 'D',
+      method1: function( parameter ){
+        console.log( "D::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by D::method1";
+      },
+    });
+
+    var M = declare( [ AA, L, D ], {
+      name: 'M'
+    } )
+
+    // Make up a new object
+    var m = new M();
+    m.name = "OBJECT M";
+
+    // Print the prototype chain
+    var p = m;
+    while( p != null ){
+      console.log( p.name );
+      p = p.__proto__;
+    }
+    /* =>
+    OBJECT M
+    M
+    D
+    B
+    L
+    AA
+    A3
+    A2
+    A1
+    undefined
+    */
+
+Here, keep in mind that:
+
+* `A1`, `A2`, `A3`, `B` and `L` are basic constructors deriving from Object
+* `AA` derives from `[ A1, A2, A3 ]` (all basic constructors)
+* `D` derives from `[ A1, A2, B ]` (all basic constructors)
+* `M` derives from `[ AA, L, D ]`.
+
+While `AA` and `D` are very straightforward, since all of the starting points are flat.
+However, `M` is interesting: it inherits from `AA` (which includes `A1`, `A2` and `A3`), `L` and then `D` (which overlaps with `AA` for `A1` and `A2`). So, what happens here?
+
+SimpleDeclare uses the principle of least surprise: inheritance will happen left to right, without repeating constructors that have already been applied.
+
+So: first of all, `AA` is checked, and it's expanded into `[ AA, A3, A2, A1 ]` and added to the main list. Note that the order determines their precedence: this makes sense, since a `method1()` defined in `AA` will override the one set in `A3`. The next element is `L`: it's not in the main list already, so it's added. The main list becomes `[ L, AA, A3, A2, A1 ]`. Then it's interesting: `D` needs to be added. `D` itself expands into `[ D, B, A2, A1 ]`. However, `A1` and `A2` are already present in the big list (which is, I remind you, `[ L, AA, A3, A2, A1 ]`). So, only the elements in `D` that don't overlap, namely `D` itself and `B`. So, the main list now is  `[ D, B, L, AA, A3, A2, A1 ]`. `M` obviously needs to be in the prototype chain: it will have the second argment passed to `declare()` as its prototype template. So, the final prototype chain will be `[ M, D, B, L, AA, A3, A2, A1 ]`. Note that only `M` is a proper new constructor: the others are all clones of the respective ones, so that M inherits from the right one.
+
+If you wanted to sum up how this works in one sentence, th esentence would be: "In multiple inheritance, copies of the constructors are added left to right, including constructors in prototype chains, without ever adding the same constructor twice". In this case, `A1` and `A2` were already duplicate by the time we got to `D`, which is why `A1` and `A2` were ignored.
+
+## Vanilla constructors and multiple inheritance
+
+You can use `inherits()` for multiple inheritance too. For example:
+
+
+
+# Multiple inheritance using `extend()`
+
+
+
+
+# (Not much) Under the hood
+
+SimpleDeclare works with Javascript as much as possible. There is only a small level of trickery used to make things work.
+
+### Attributes to returned constructors
+
+Each constructor has the following attributes:
+
+#### `extend()`
+
+This is a function that is attached to each constructor returned. This allows you to create a new constructor "extending" an existing one.
 
 #### `ActualConstructor`
 
