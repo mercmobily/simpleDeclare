@@ -167,9 +167,10 @@ var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
     // a SimpleDeclare constructor. Simply run the ActualConstructor if available
     } else {
 
-      if( arguments.callee.hasOwnProperty( 'ActualConstructor' ) ){
-        arguments.callee.ActualConstructor.apply( this, arguments );
+      if( ReturnedCtor.hasOwnProperty( 'ActualConstructor' ) ){
+        ReturnedCtor.ActualConstructor.apply( this, arguments );
       }
+
     }
   };
 
@@ -436,9 +437,6 @@ exports = module.exports = declare;
 
 
 
-
-
-/*
 
 function inspectProto( o ){
   var r = [];
@@ -1436,4 +1434,3 @@ var ABC = declare( [A,B,C], {
 var abc = new ABC();
 var r = abc.m1( 'pippo');
 console.log("RESULT:", r );
-*/
