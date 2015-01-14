@@ -11,7 +11,6 @@
 
     /*
       TODO:
-        * CRUCIAL: Rewrite documentation
         * CRUCIAL: Write tests
         * Make it available for browser via AMD and node at the same time
     */
@@ -134,6 +133,69 @@
       
     var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
 
+
+      // Third implementation. The holy grail?
+      var ReturnedCtor = function(){
+
+        // The object's main constructor is being run. It will be responsible of
+        // running all of the constructors in the prototype chain, starting from
+        // the innermost and moving all the way out, except the last one
+        // (which it itself) 
+        if( this.__proto__.constructor === ReturnedCtor ){
+
+          // Goes through the prototype chain and execute every single constructor.
+          // If the constructor has the ActualConstructor attribute, then it's a SimpleDeclare
+          // constructor 
+          var l = [];
+          var o = this;
+          while( o = o.__proto__ ){
+            l.push( o.constructor );
+          }
+          for( var i = l.length - 1; i >=1; i -- ){
+            l[ i ].apply( this, arguments );
+          }
+          // Itself. Since I *know* this is a SimpleDeclare constructor,
+          // run ActualConstructor if available
+          if( this.__proto__.constructor.hasOwnProperty( 'ActualConstructor' ) ){
+            this.__proto__.constructor.ActualConstructor.apply( this, arguments );
+          }
+
+        // This is not the main object's constructor method -- plus, it's OBVIOUSLY
+        // a SimpleDeclare constructor. Simply run the ActualConstructor if available
+        } else {
+
+          if( arguments.callee.hasOwnProperty( 'ActualConstructor' ) ){
+            arguments.callee.ActualConstructor.apply( this, arguments );
+          }
+        }
+      }
+
+      /*
+      // Second implementation. I don't like the lame way it checks if it's within ActualConstructor. Plus,
+      // BIG problem: it only differentiates SimpleDeclare methods and Non-SimpleDeclare methods.
+      var ReturnedCtor = function(){
+
+        // Goes through the prototype chain and execute every single constructor.
+        // If the constructor has the ActualConstructor attribute, then it's a SimpleDeclare
+        // constructor 
+        var l = [];
+        var o = this;
+        while( o = o.__proto__ ){
+          // If it's a SimpleDeclare constructor, add the ActualConstructor instead
+          if( o.constructor.toString() === ReturnedCtor.toString() ){
+            if( o.constructor.ActualConstructor ) l.push( o.constructor.ActualConstructor );
+          }
+          // Otherwise, add the constructor
+          else l.push(  o.constructor );
+        }
+        for( var i = l.length - 1; i >=0; i -- ){
+          l[ i ].apply( this, arguments );
+        }
+
+      };
+      */
+
+       /*
       // The constructor that will get returned. It's basically a function
       // that calls the parent's constructor and then protoMixin.constructor.
       // It works with plain JS constructor functions (as long as they have,
@@ -151,7 +213,8 @@
         }
 
       };
-
+      */
+      
       if( protoMixin === null ) protoMixin = {};
       if( typeof( protoMixin ) !== 'object' ) protoMixin = {};
       
@@ -360,63 +423,20 @@
 
     exports = module.exports = declare;
 
-
-   var A = declare( null, {
-
-      name: 'A',
-
-      method1: function( parameter ){
-        console.log( "A::method1() called, parameter: ", parameter );
-        return "Returned by A::method1";
-      },
-      constructor: function( parameter ){
-        console.log( "A's constructor called!" );
-      }
-    });
-    A.classMethod = function(){
-      console.log( "This is A's method")
-    }
-
-    var B = function(){
-      debugger;
-      //arguments.callee.prototype.__proto__.constructor.apply( this, arguments );
-      A.apply( this, arguments );
-      console.log("B's constructor called!");
-      
-
-    }
-    B.prototype = Object.create( A.prototype, {
-      constructor: {
-        value: B,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
-    B.prototype.name = "B";
-
-    var C = declare( B, {
-
-      name: 'C',
-
-      constructor: function( parameter ){
-        console.log( "C's constructor called!" );
-      }
-
-    })
-
-    var c = new C();
-    /* =>
-    A's constructor called!
-    B's constructor called!
-    C's constructor called!
-    */
-    c.method1( 10 ); // => A::method1() called, parameter:  10
-
-
-
-
 /*
+
+
+
+
+
+
+
+
+
+
+
+
+
 function inspectProto( o ){
   var r = [];
 
@@ -442,7 +462,6 @@ function inspectProto( o ){
 
   });
 }
-
 
 
     var A = declare( null, {
@@ -1414,4 +1433,5 @@ var ABC = declare( [A,B,C], {
 var abc = new ABC();
 var r = abc.m1( 'pippo');
 console.log("RESULT:", r );
+
 */
