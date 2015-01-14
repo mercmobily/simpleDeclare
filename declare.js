@@ -247,7 +247,6 @@ var constructorAlreadyInList = function( Ctor, list ){
   return found;    
 }
 
-
 var declare = function( SuperCtorList, protoMixin ){
 
   var ResultClass;
@@ -259,71 +258,74 @@ var declare = function( SuperCtorList, protoMixin ){
     throw new Error( "SuperCtor parameter illegal in declare");
   }
 
-  // SuperCtor is null: the array will be an empty list
+  // Normalise SuperCtor into an array
   if( SuperCtorList === null ) SuperCtorList = [];
-  if( ! Array.isArray( SuperCtorList ) ) SuperCtorList = [ SuperCtorList ];
+  if( typeof( SuperCtorList ) === 'function' ) SuperCtorList = [ SuperCtorList ];
 
-  // The first constructor in the list is special: it's where the real inheritance
-  // will actually happen. If it was passed as null, turn it into Object
-  FirstConstructor = SuperCtorList[ 0 ] || Object;
-
-  // NOW:
-  // Go through every __proto__ of every derivative class, and augment
-  // MixedClass by inheriting from A COPY OF each one of them.
-
-  // Class-wide functions are copied over for each iteration
-  var list = [];
-  for( var i = 1, l = SuperCtorList.length; i < l; i ++ ){
-    var proto;
-
-    // Get the prototype list, in the right order
-    // (the reversed discovery order)
-    // The result will be placed in `subList`
-    var subList = [];    
-    proto = SuperCtorList[ i ].prototype;
-    while( proto ){
-      if( proto.constructor !== Object ) subList.push( proto );
-      proto = proto.__proto__;
-    };
-    subList = subList.reverse();
-
-    // Add each element of sublist as long as it's not already in the main `list`
-    for( var ii = 0, ll = subList.length; ii < ll; ii ++ ){
-      if( ! constructorAlreadyInList( subList[ ii ].constructor, list ) ) list.push( subList[ ii ] );
-    }
-  }
-
-  // Set the starting point. If it's Object, there is no need to check anything.
-  // Otherwise check that the first constructor is not already in the list
-  // NOTE: FirstConstructor MUST not be in the list, because if it is, then the object
-  // would inherit TWICE from the same constructor (the "real" one, FirstConstructor, and
-  // thedeep mixin copy created above) which will potentially lead to even more duplication
-  // (in case for example FirstConstructor inherits from more methods then mixed in)
-  if( FirstConstructor === Object ){
+  
+  // No parameters: inheriting from Object directly, no inheritance at all
+  if( SuperCtorList.length === 0 ){
     MixedClass = Object;
-  } else {
-    if( ! constructorAlreadyInList( FirstConstructor, list ) ) MixedClass = FirstConstructor;
-    else MixedClass = Object;
   }
- 
-  // For each element in the prototype list that isn't Object(),
-  // inherit from that too
-  for( var ii = 0, ll = list.length; ii < ll; ii ++ ){
-    var proto = list[ ii ];
+  // Only one parameter: straght single inheritance.
+  else if( SuperCtorList.length === 1 ){
+    MixedClass = SuperCtorList[ 0 ];
 
-    var M = MixedClass;
+  // More than one parameter: multiple inheritance at work
+  // MixedClass will end up being an artificially made constructor
+  // where the prototype chain is the sum of _every_ prototype in
+  // every element of SuperCtorList (taking out duplicates)
+  } else {
+    MixedClass = Object;
 
-    if( proto.constructor !== Object ){
+    // NOW:
+    // Go through every __proto__ of every derivative class, and augment
+    // MixedClass by inheriting from A COPY OF each one of them.
 
-      MixedClass = makeConstructor( MixedClass, proto, proto.constructor );    
-      copyClassMethods( M, MixedClass ); // Methods previously inherited
+    var list = [];
+    for( var i = 0, l = SuperCtorList.length; i < l; i ++ ){
+      var proto;
 
-      copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
+      // Get the prototype list, in the right order
+      // (the reversed discovery order)
+      // The result will be placed in `subList`
+      var subList = [];    
+      proto = SuperCtorList[ i ].prototype;
+      while( proto ){
+        if( proto.constructor !== Object ) subList.push( proto );
+        proto = proto.__proto__;
+      };
+      subList = subList.reverse();
+
+      // Add each element of sublist as long as it's not already in the main `list`
+      for( var ii = 0, ll = subList.length; ii < ll; ii ++ ){
+        if( ! constructorAlreadyInList( subList[ ii ].constructor, list ) ) list.push( subList[ ii ] );
+      }
+    }
+
+    // For each element in the prototype list that isn't Object(),
+    // augment MixedClass with a copy of the new prototype
+    for( var ii = 0, ll = list.length; ii < ll; ii ++ ){
+      var proto = list[ ii ];
+
+      var M = MixedClass;
+
+      if( proto.constructor !== Object ){
+
+        MixedClass = makeConstructor( MixedClass, proto, proto.constructor );    
+        copyClassMethods( M, MixedClass ); // Methods previously inherited
+
+        copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
+      }
     }
   }
 
   // Finally, inherit from the MixedClass, and add
   // class methods over
+  // MixedClass might be:
+  // * Object (coming from no inheritance),
+  // * SuperCtorList[0] (coming from single inheritance)
+  // * A constructor with the appropriate prototype chain (multiple inheritance)
   var ResultClass = makeConstructor( MixedClass, protoMixin );
   copyClassMethods( MixedClass, ResultClass );
  
@@ -353,11 +355,12 @@ var declare = function( SuperCtorList, protoMixin ){
   return ResultClass;
 };
 
-
 // Returned extra: declarableObject
 declare.extendableObject = declare( null );
 
 exports = module.exports = declare;
+
+
 
 
 
@@ -381,7 +384,7 @@ function inspectProto( o ){
     p = p.__proto__;
   }
 
-  r.reverse().forEach( function( item ){
+  r.forEach( function( item ){
     console.log( "\nITEM:" , item.hasOwnProperty( 'name') ? item.name : 'UNKNOWN' );
     console.log( item );
     //Object.getOwnPropertyNames( item ).forEach( function( k ){
@@ -395,6 +398,7 @@ function inspectProto( o ){
 
   });
 }
+
 
 
     var A = declare( null, {
@@ -416,13 +420,20 @@ function inspectProto( o ){
       }
     } );
 
-    globalB = B;
-
     var C = declare( B, {
       name: 'C',
       m: function( param ){
         this.inherited( arguments);
         console.log( "C::m is returning 12");
+        return 12;
+      }
+    })
+
+    var D = declare( C, {
+      name: 'D',
+      m: function( param ){
+        this.inherited( arguments);
+        console.log( "D::m is returning 12");
         return 12;
       }
     })
@@ -437,21 +448,51 @@ function inspectProto( o ){
       }
     })
 
+    var AB = declare( [ A, B ], { name: 'AB' } );
+    var Test = declare( [ AB, D ], { name: 'Test' } );
 
-    var T = declare( [ A, B, C ], { name: 'T' });
-    var M = declare( [ Z, T, A, B, C ], { name: 'M' });
-
-
-
+    var test = new Test();
+    test.name = "OBJECT Test";
+    inspectProto( test );
 
     var c = new C();
+    c.name = "OBJECT C";
+    console.log("MIST BE TRUE:", c instanceof A );
+    inspectProto( c );
+
+    var T = declare( [ A, B, C ], { name: 'T' });
+
+    var M = declare( [ A, Z, T, A, B, C ], { name: 'M' });
+
+
+    var P = declare( [ Z, A, B, C ], { name: 'P' });
+
+    console.log('------------');
+    var p = new P();
+    p.name = "OBJECT P";
+    inspectProto( p );
+
+
+    console.log('------------');
+    var t = new T();
+    t.name = "OBJECT T";
+    inspectProto( t );
+
+    console.log('------------');
+    var m = new M();
+    m.name = "OBJECT M";
+    inspectProto( m );
+
+    console.log( m instanceof A );
+
+//process.exit();
+
 
     console.log("Calling c.m()" );
     c.m('pluto' );
     
     var m = new M();
     console.log( m instanceof Z );
-    console.log( globalB );
     debugger;
     console.log( m.instanceOf( Z ) );
 
@@ -461,8 +502,6 @@ function inspectProto( o ){
     console.log("Calling m.m()" );
     //m.m('pluto' );
    
-
-
 
 
 
@@ -565,34 +604,6 @@ console.log( "b instanceof B: ", b instanceof B );
 console.log( "b.instanceOf B: ", b.instanceOf( B ) );
 console.log( "b instanceof A: ", b instanceof A );
 console.log( "b.instanceOf A: ", b.instanceOf( A ) );
-
-
-function inspectProto( o ){
-  var r = [];
-
-  var p = o;
-  var name = 'OBJ';
-  while( p != null ){
-      r.push( p );
-    //});
-    p = p.__proto__;
-  }
-
-  r.reverse().forEach( function( item ){
-    console.log( "\nITEM:" , item.hasOwnProperty( 'name') ? item.name : 'UNKNOWN' );
-    console.log( item );
-    //Object.getOwnPropertyNames( item ).forEach( function( k ){
-    //  var output;
-    //  var e = item[ k ];
-
-      //if( typeof( e ) === 'function') output = e.toString();
-      //output = e && typeof( e ) === 'function' ? '[function]'  : e;
-    //  console.log( k + ': ' , e );
-    //});
-
-  });
-}
-
 
     // Create a BaseClass with a constructor, a method and a class method
     var BaseClass = declare( null, {
