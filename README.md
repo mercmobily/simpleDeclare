@@ -261,9 +261,9 @@ This is the easiest possible way to override node-style methods.
   }
 ````
 
-# Simple inheritance using `extend()`
+## Simple inheritance using `extend()`
 
-# Multiple inheritance
+## Multiple inheritance
 
 You can easily inherit from multiple constructors:
 
@@ -282,6 +282,8 @@ When doing this, note that:
 ###  SimpleDeclare will only allow to inherit from a constructor once
 
 
-# Multiple inheritance using `extend()`
+## Multiple inheritance using `extend()`
 
+
+## Under the hood: `ActualConstructor` and `OriginalConstructor`
 
