@@ -413,8 +413,7 @@ In simple terms, this means that:
 
 Let me explain with some code:
 
-
-
+````Javascript
     var A1 = declare( null, {
       name: 'A1',
       method1: function( parameter ){
@@ -505,6 +504,7 @@ Let me explain with some code:
     A1
     undefined
     */
+````
 
 Here, keep in mind that:
 
@@ -512,6 +512,8 @@ Here, keep in mind that:
 * `AA` derives from `[ A1, A2, A3 ]` (all basic constructors)
 * `D` derives from `[ A1, A2, B ]` (all basic constructors)
 * `M` derives from `[ AA, L, D ]`.
+
+Note: this example is convoluted. In real life, you will hopefully never see this. SimpleDeclare avoids duplication as a failsafe mechanism -- ideally you won't inherit twice from the same constructor.
 
 While `AA` and `D` are very straightforward, since all of the starting points are flat.
 However, `M` is interesting: it inherits from `AA` (which includes `A1`, `A2` and `A3`), `L` and then `D` (which overlaps with `AA` for `A1` and `A2`). So, what happens here?
@@ -524,14 +526,70 @@ If you wanted to sum up how this works in one sentence, th esentence would be: "
 
 ## Vanilla constructors and multiple inheritance
 
-You can use `inherits()` for multiple inheritance too. For example:
 
 
 
 # Multiple inheritance using `extend()`
 
+You can use `extend()` for multiple inheritance too. For example:
+
+var M1 = declare( null, {
+      name: 'M1',
+      method1: function( parameter ){
+        console.log( "M1::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by M1::method1";
+      },
+    });
+
+    var M2 = declare( null, {
+      name: 'M2',
+      method1: function( parameter ){
+        console.log( "M2::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by M2::method1";
+      },
+    });
+
+    var A = declare( null, {
+      name: 'A',
+      method1: function( parameter ){
+        console.log( "A::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by A::method1";
+      },
+    });
 
 
+    var B = A.extend( [ M1, M2 ], {
+      name: 'B', 
+      method1: function( parameter ){
+        console.log( "B::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by B::method1";
+      },
+    })
+
+    // Make up a new object
+    var b = new B();
+    b.name = "OBJECT B";
+
+    // Print the prototype chain
+    var p = b;
+    while( p != null ){
+      console.log( p.name );
+      p = p.__proto__;
+    }
+    /* =>
+    OBJECT B
+    B
+    M2
+    M1
+    A
+    undefined
+    */
+
+Note that `B` will be based on an object that can be seen as `A` plus `M1` plus `M2`.
 
 # (Not much) Under the hood
 
