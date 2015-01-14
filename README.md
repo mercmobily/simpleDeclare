@@ -247,19 +247,72 @@ The `this.inheritedAsync()` function accepts two arguments: the `arguments` arra
 
 This is the easiest possible way to override node-style methods.
 
-# DOCUMENTATION ENDS HERE. THE REST IS ONLY SKETCHED.
 
 ## Inheriting from "pure" constructor functions
 
+You can use SimpleDeclare to inherit from constructor functions. In fact, every constructor created with SimpleDeclare is in fact a plain constructor function.
+
+For example:
 
 ````Javascript
-  var A = function(){
-    console.log("This is A's constructor!")
-  }
-  A.prototype.method1 = function(){
-    console.log("method1() defined the good old Javascript way")
-  }
+
+   var A = declare( null, {
+
+      name: 'A',
+
+      method1: function( parameter ){
+        console.log( "A::method1() called, parameter: ", parameter );
+        return "Returned by A::method1";
+      },
+      constructor: function( parameter ){
+        console.log( "A's constructor called!" );
+      }
+    });
+    A.classMethod = function(){
+      console.log( "This is A's method")
+    }
+
+    var B = function(){
+      debugger;
+      //arguments.callee.prototype.__proto__.constructor.apply( this, arguments );
+      A.apply( this, arguments );
+      console.log("B's constructor called!");
+      
+
+    }
+    B.prototype = Object.create( A.prototype, {
+      constructor: {
+        value: B,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    B.prototype.name = "B";
+
+    var C = declare( B, {
+
+      name: 'C',
+
+      constructor: function( parameter ){
+        console.log( "C's constructor called!" );
+      }
+
+    })
+
+    var c = new C();
+    /* =>
+    A's constructor called!
+    B's constructor called!
+    C's constructor called!
+    */
+    c.method1( 10 ); // => A::method1() called, parameter:  10
 ````
+
+As you can see, everything works 100% fine!
+Note that I made sure that `B` behaves like a good citizen, and invokes `A's` constructor. (This happens automatically with SimpleDeclare's constructors, which always invoke the "parent" constructor before invoking their own initialisation function).
+
+
 
 ## Simple inheritance using `extend()`
 
@@ -272,18 +325,79 @@ You can easily inherit from multiple constructors:
 
 ````
 
-When doing this, note that:
-
-
-### Only the first element in the declare list will be inherited in "classical" terms.
-
-`instanceof` will work only for the first element. The others will be cloned.
-
 ###  SimpleDeclare will only allow to inherit from a constructor once
 
 
 ## Multiple inheritance using `extend()`
 
 
-## Under the hood: `ActualConstructor` and `OriginalConstructor`
 
+
+
+## (Not much) Under the hood
+
+SimpleDeclare works with Javascript as much as possible. There is only a small level of trickery used to make things work.
+
+### Attributes to returned constructors
+
+Each constructor has the following attributes:
+
+#### `extend`
+
+This is a function that is attached to each constructor returned. This allows you to write this:
+
+    var A = declare( null, {
+      method: function(){
+        console.log( "Hello" );
+      }
+    });
+
+    var B = A.extend( {
+      method: function(){
+        console.log( "A MUCH BETTER hello!" );
+      }
+    })
+
+#### `ActualConstructor`
+
+When declaring a constructor, you can pass a `constructor` parameter with initialisation code:
+
+    var A = declare( null, {
+      constructor: function(){
+        this.something = 10;
+      }
+    })
+    console.log( A.ActualConstructor.toString() );
+    /* =>
+    function (){
+      this.something = 10;
+    }
+    */
+
+So, `A.ActualConstructor` will have the function passed as `constructor`. When running `a = new A()`, you are actually running a stock function that will 1) Look for, and run, the parent constructor 2) Run `ActualConstructor()`
+
+#### `OriginalConstructor`
+
+When using SimpleDeclare's multiple inheritance features, each constructor is actually cloned and placed in a ad-hoc prototype chain that depends on the second parameter of `declare()`. Each cloned constructor will have an OriginalConstructor attribute. This attrbute is basically never exposed directly (since developers never need direct access to those constructors). However, it's necessary for SimpleDeclare so that 1) Duplication in the prototype chain is avoided properly 2) The `instanceOf()` method can work properly (see below).
+
+### Attributes to returned constructors' prototype (available to objects)
+
+When creating a constructor, a numbe of parameters are made available to the prototpe _if they weren't already available_ (so, unnecessary pollution is avoided).
+
+Here they are.
+
+#### `getInherited()`
+
+Returns the inherited function from the parent prototype, without running it
+
+#### `inherited()`
+
+Runs the inherited function from the parent prototype
+
+#### `inheritedAsync()`
+
+Runs the inherited function from the parent prototype (asynchronous fashion)
+
+#### `instanceOf( Ctor )`
+
+Checks if the current object is anywhere in Ctor's prototype chain. NOTE: to determine descendance, it checks the prototype chain also checking for OriginalConstructor in each case, so that checking on mixin works properly. 
