@@ -247,7 +247,7 @@ This is the easiest possible way to override node-style methods.
 
 # Inheriting from "pure" constructor functions
 
-You can use SimpleDeclare to inherit from constructor functions. In fact, every constructor created with SimpleDeclare is in fact a plain constructor function.
+You can use SimpleDeclare to inherit from constructor functions.
 
 For example:
 
@@ -273,7 +273,7 @@ For example:
     // Plain vanilla class (ugly!)
     var B = function(){
       //arguments.callee.prototype.__proto__.constructor.apply( this, arguments );
-      A.apply( this, arguments );
+      //A.apply( this, arguments );
       console.log("B's constructor called!");
     }
     B.prototype = Object.create( A.prototype, {
@@ -306,8 +306,10 @@ For example:
     c.method1( 10 ); // => A::method1() called, parameter:  10
 ````
 
-As you can see, everything works 100% fine!
-Note that I made sure that `B` behaves like a good citizen, and invokes `A's` constructor. (This happens automatically with SimpleDeclare's constructors, which always invoke the "parent" constructor before invoking their own initialisation function).
+As you can see, everything works 100% fine: all constructors run in the right order.
+What actually happens behind the scenes is that SimpleDeclare's standard constructor function will go through the whole prototype chain starting from the innermost element, and will execute every constructor one after the other.
+
+<!--Note that I made sure that `B` behaves like a good citizen, and invokes `A's` constructor. (This happens automatically with SimpleDeclare's constructors, which always invoke the "parent" constructor before invoking their own initialisation function).-->
 
 # Simple inheritance using `extend()`
 
@@ -520,14 +522,17 @@ However, `M` is interesting: it inherits from `AA` (which includes `A1`, `A2` an
 
 SimpleDeclare uses the principle of least surprise: inheritance will happen left to right, without repeating constructors that have already been applied.
 
-So: first of all, `AA` is checked, and it's expanded into `[ AA, A3, A2, A1 ]` and added to the main list. Note that the order determines their precedence: this makes sense, since a `method1()` defined in `AA` will override the one set in `A3`. The next element is `L`: it's not in the main list already, so it's added. The main list becomes `[ L, AA, A3, A2, A1 ]`. Then it's interesting: `D` needs to be added. `D` itself expands into `[ D, B, A2, A1 ]`. However, `A1` and `A2` are already present in the big list (which is, I remind you, `[ L, AA, A3, A2, A1 ]`). So, only the elements in `D` that don't overlap, namely `D` itself and `B`. So, the main list now is  `[ D, B, L, AA, A3, A2, A1 ]`. `M` obviously needs to be in the prototype chain: it will have the second argment passed to `declare()` as its prototype template. So, the final prototype chain will be `[ M, D, B, L, AA, A3, A2, A1 ]`. Note that only `M` is a proper new constructor: the others are all clones of the respective ones, so that M inherits from the right one.
+So: first of all, `AA` is checked, and it's expanded into `[ AA, A3, A2, A1 ]` and added to the main list. Note that the order determines their precedence: this makes sense, since a `method1()` defined in `AA` will override the one set in `A3`. The next element is `L`: it's not in the main list already, so it's added. The main list becomes `[ L, AA, A3, A2, A1 ]`. Then it's interesting: `D` needs to be added. `D` itself expands into `[ D, B, A2, A1 ]`. However, `A1` and `A2` are already present in the big list (which is, I remind you, `[ L, AA, A3, A2, A1 ]`). So, only the elements in `D` that don't overlap, namely `D` itself and `B`. So, the main list now is  `[ D, B, L, AA, A3, A2, A1 ]`. `M` obviously needs to be in the prototype chain: it will have the second argment passed to `declare()` as its prototype template. So, the final prototype chain will be `[ M, D, B, L, AA, A3, A2, A1 ]`. Note that only `M` is a proper new constructor: the others are all clones of the respective ones, so that M inherits from the right ones.
 
-If you wanted to sum up how this works in one sentence, th esentence would be: "In multiple inheritance, copies of the constructors are added left to right, including constructors in prototype chains, without ever adding the same constructor twice". In this case, `A1` and `A2` were already duplicate by the time we got to `D`, which is why `A1` and `A2` were ignored.
+If you wanted to sum up how this works in one sentence, this esentence would be: "In multiple inheritance, copies of the constructors are added left to right, including constructors in prototype chains, without ever adding the same constructor twice". In this case, `A1` and `A2` were already duplicate by the time we got to `D`, which is why `A1` and `A2` were ignored.
 
+<!--
 ## Vanilla constructors and multiple inheritance
 
+As I wrote above, SimpleDeclare creates standard constructor methods; the same applies to plain Javascript methods, that are handles completely fine by SimpleDeclare.
 
-
+However, something needs to be said about calling the parent's constructor. As I wrote in this guide, every SimpleDeclare constructor will attempt to call the parent's constructor. Ideally, the vanilla constructor would do the same thing, in order not to break the calling chain. The problem with multiple inheritance is that you never know where 
+-->
 
 # Multiple inheritance using `extend()`
 
@@ -619,7 +624,7 @@ When declaring a constructor, you can pass a `constructor` parameter with initia
     }
     */
 
-So, `A.ActualConstructor` will have the function passed as `constructor`. When running `a = new A()`, you are actually running a stock function that will 1) Look for, and run, the parent constructor 2) Run `ActualConstructor()`
+So, `A.ActualConstructor` will have the function passed as `constructor`. When running `a = new A()`, you are actually running a stock function that will run all constructors in the prototype chain, starting from the innermost one and moving all the way out. The stock function is smart about this: it will run this cycle only when it's being called directly as the actual constructor. In any other cases, it will run ActualConstructor.
 
 #### `OriginalConstructor`
 
