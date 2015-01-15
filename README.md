@@ -29,7 +29,8 @@ SimpleDeclare is the Holy Grail of OOP implementation in Javascript, working _wi
     { method1: [Function],
       inherited: [Function],
       inheritedAsync: [Function],
-      instanceOf: [Function] }
+      instanceOf: [Function],
+      getInherited: [Function] }
     */
 
     a.method1(); // => A::method1() called!
@@ -38,7 +39,11 @@ SimpleDeclare is the Holy Grail of OOP implementation in Javascript, working _wi
 ````
 
 This is the simplest way to create a constructor function: the first parameter, `null`, tells SimpleDeclare that you are inheriting from `Object()`. The second parameter contains the methods that will be added to the constructor's prototype.
-You can ee that A's prototype also contains extra methods: `inherited()` and `inheritedAsync()` (which will call `method1()` of the parent) and `instanceOf()` (which checks if an object is the instance of a constructor, _including mixins_ -- more about this later).
+You can see that `A`'s prototype also contains extra methods: 
+
+* `inherited()` and `inheritedAsync()` (which will call `method1()` of the parent);
+* `instanceOf()` (which checks if an object is the instance of a constructor, even when using multiple inheritance -- more about this later);
+* getInherited() (returns the corresponding function in the parent).
 
 
 # Simple inheritance from Object with initialisation function
@@ -136,7 +141,7 @@ Here, a `constructor` attribute is passed: it will be called every time a new in
 
 Note that the attribute `name` is only here so that you can clearly recognise which prototype you're looking at. It has no special meaning for SimpleDeclare itself.
 
-Also note that when running `new B()`, _both_ constructors are run, in the right order. This means that when you define a constructor with simpleDeclare you can rest assured that _every_ initialisation function passed as `constructor` will actually be run (with the parameters passed to B() ).
+Also note that when running `new B()`, _both_ constructors are run, in the right order. This means that when you define a constructor with simpleDeclare you can rest assured that _every_ initialisation function passed as `constructor` will actually be run (with the parameters passed to `B()` ).
 
 The `b` variable is recognised as `instanceof`, as it should.
 
@@ -239,7 +244,7 @@ Calling the super function is just a matter of typing `this.inherited(arguments)
     });
 ````    
 
-`B::method1()` follows Node's callback standards: the last parameter is a callback, which is expected to be called with two parameters: `err` (an Error object if there was an error) and the returned value.
+`B::method1()` follows Node's callback standards: the last parameter is a callback, which is expected to be called with two parameters: `err` (an `Error` object if there was an error) and the returned value.
 
 The `this.inheritedAsync()` function accepts two arguments: the `arguments` array, and a new callback. What will actually happen, is that the super method will be called by `inheritedAsync()` with a modified version of `arguments`: a version where the last parameter is changed to the new callback.
 
@@ -522,7 +527,7 @@ However, `M` is interesting: it inherits from `AA` (which includes `A1`, `A2` an
 
 SimpleDeclare uses the principle of least surprise: inheritance will happen left to right, without repeating constructors that have already been applied.
 
-So: first of all, `AA` is checked, and it's expanded into `[ AA, A3, A2, A1 ]` and added to the main list. Note that the order determines their precedence: this makes sense, since a `method1()` defined in `AA` will override the one set in `A3`. The next element is `L`: it's not in the main list already, so it's added. The main list becomes `[ L, AA, A3, A2, A1 ]`. Then it's interesting: `D` needs to be added. `D` itself expands into `[ D, B, A2, A1 ]`. However, `A1` and `A2` are already present in the big list (which is, I remind you, `[ L, AA, A3, A2, A1 ]`). So, only the elements in `D` that don't overlap, namely `D` itself and `B`. So, the main list now is  `[ D, B, L, AA, A3, A2, A1 ]`. `M` obviously needs to be in the prototype chain: it will have the second argment passed to `declare()` as its prototype template. So, the final prototype chain will be `[ M, D, B, L, AA, A3, A2, A1 ]`. Note that only `M` is a proper new constructor: the others are all clones of the respective ones, so that M inherits from the right ones.
+So: first of all, `AA` is checked, and it's expanded into `[ AA, A3, A2, A1 ]` and added to the main list. Note that the order determines their precedence: this makes sense, since a `method1()` defined in `AA` will override the one set in `A3`. The next element is `L`: it's not in the main list already, so it's added. The main list becomes `[ L, AA, A3, A2, A1 ]`. Then it's interesting: `D` needs to be added. `D` itself expands into `[ D, B, A2, A1 ]`. However, `A1` and `A2` are already present in the big list (which is, I remind you, `[ L, AA, A3, A2, A1 ]`). So, only the elements in `D` that don't overlap, namely `D` itself and `B`. So, the main list now is  `[ D, B, L, AA, A3, A2, A1 ]`. `M` obviously needs to be in the prototype chain: it will have the second argment passed to `declare()` as its prototype template. So, the final prototype chain will be `[ M, D, B, L, AA, A3, A2, A1 ]`. Note that only `M` is a proper new constructor: the others are all clones of the respective ones, so that `M` inherits from the right ones.
 
 If you wanted to sum up how this works in one sentence, this esentence would be: "In multiple inheritance, copies of the constructors are added left to right, including constructors in prototype chains, without ever adding the same constructor twice". In this case, `A1` and `A2` were already duplicate by the time we got to `D`, which is why `A1` and `A2` were ignored.
 
