@@ -15,250 +15,370 @@ var declare = require('./declare.js');
 // Define basic classes to play with
 
 
-var BaseClass = declare( null, {
-
-  // Define the constructor, will initialise `a`
-  constructor: function( p ){
-    this.a = p;
-  },
-
-
-  assignA: function( a ){
-    this.a = a;
-    return 1000;
-  },
-
-  asyncMethod: function( p1, p2, done ){
-    done( null, p1 + p2 );
-  },
-
-});
-
-BaseClass.classMethod = function( p ){
-  return p * p;
-}
-
-
-
 // Make sure uncaught errors are displayed
 process.on('uncaughtException', function(err) {
   console.error(err.stack);
 });
 
-
 function l( v ){
   console.log( require( 'util' ).inspect( v, { depth: 10 } ) );
 }
 
+function getProtoChain( p ){
+  var list = [];
+  while( p = p.__proto__){
+    if( p.constructor === Object ){
+      list.push( "BASE" );
+    } else {
+      list.push( p.name );
+    }
+  }
+  return list.reverse();
+}
+
+function compareProtoChain( o, list ){
+
+  var p = getProtoChain( o );
+  for( var i = 0, l = list.length; i < l; i ++ ){
+    if( p[ i ] !== list[ i ] ) return false;
+  }
+  return true;
+}
 
 var tests = {
 
-  "straight class": function( test ){
-    var self = this;
+  "straight class declarations": function( test ){
 
-    var baseObject = new BaseClass( 10 );
-    test.equal( baseObject.a, 10 );
-    var r = baseObject.assignA( 20 );
-		test.equal( baseObject.a, 20 );
-    test.equal( r, 1000 );
-
-    baseObject.asyncMethod( 7, 8, function( err, res ){
-      test.ifError( err );
-      test.equal( res, 15 );
-      test.done();
-    });
-
-  },
-
-
-  "derived class": function( test ){
-    var self = this;
-
-    var DerivedClass = declare( BaseClass, {
-
-      // Define the constructor, will initialise `a`
-      constructor: function( p ){
-        this.b = p + 1;
-      },
-    });
-
-    var derivedObject = new DerivedClass( 10 );
-    test.equal( derivedObject.a, 10 );
-    test.equal( derivedObject.b, 11 );
-
-    test.done();
-  },
-
-  "derived class redefining a method": function( test ){
-    var self = this;
-
-    var DerivedClass = declare( BaseClass, {
-      assignA: function( a ){
-        this.a = a + 10;
-        return 2000;
-      },
-    });
-
-    var derivedObject = new DerivedClass( 10 );
-    test.equal( derivedObject.a, 10 );
-    var r = derivedObject.assignA( 20 );
-		test.equal( derivedObject.a, 30 );
-    test.equal( r, 2000 );
-
-    test.done();
-  },
-
-
-  "derived class inheriting class method": function( test ){
-    var self = this;
-
-    var DerivedClass = declare( BaseClass, {
-      assignA: function( a ){
-        this.a = a + 10;
-        return 2000;
-      },
-    });
-
-    var r = DerivedClass.classMethod( 7 );
-    test.equal( r, 49 );
-
-    test.done();
-  },
-
-
-
-  "sync inherited method": function( test ){
-    var self = this;
-
-    var DerivedClass = declare( BaseClass, {
-      assignA: function assignA( a ){
-        var r = this.inherited( arguments );
-        this.a ++;
-        return ++r;
-      },
-    });
-
-    var derivedObject = new DerivedClass( 10 );
-    test.equal( derivedObject.a, 10 );
-    var r = derivedObject.assignA( 20 );
-    test.equal( derivedObject.a, 21 );
-    test.equal( r, 1001 );
-
-    test.done();
-  },
-
-  "derived class, broken chain": function( test ){
-    var self = this;
-
-    var DerivedClass1 = declare( BaseClass, {
-
-      assignZ: function( z ){
-        this.z = z;
-      },
-    });
-
-    var DerivedClass2 = declare( DerivedClass1, {
-
-      assignA: function assignA( a ){
-        this.inherited( [ a + 1 ] );
-      },
-    });
-
-    var derivedObject2 = new DerivedClass2( 10 );
-    derivedObject2.assignA( 1000 );
-    test.equal( derivedObject2.a, 1001 );
-
-    test.done();
-  },
-
-
-  "async inherited method": function( test ){
-    var self = this;
-
-    var DerivedClass = declare( BaseClass, {
-
-      asyncMethod: function asyncMethod( p1, p2, done ){
-        this.inheritedAsync( arguments, function( err, res ){
-          done( null, res + 1 );
-        });
-      },
-
-    });
-
-    var derivedObject = new DerivedClass( 10 );
-
-    derivedObject.asyncMethod( 7, 8, function( err, res ){
-      test.ifError( err );
-      test.equal( res, 16 );
-      test.done();
-    });
-
-  },
-
-  "mixins": function( test ){
-    var self = this;
-
-    var Mixin = declare( null, {
-
-      // Define the constructor, will initialise `a`
-      constructor: function( p ){
-        this.b = p * 2;
-      },
-
-      assignA: function assignA( p ){
-        var r = this.inherited( arguments );
-        this.a = this.a + 2;
-        return r + 2;
-      },
-
-      assignB: function( p ){
-        this.b = p;
-        return 2000;
-      },
-
-    });
-
-    var MixedClass = declare( [ BaseClass, Mixin ] );
-    var mixedObject = new MixedClass( 10 ); 
-    
-    test.equal( mixedObject.a, 10 );
-    test.equal( mixedObject.b, 20 );
-
-    var r = mixedObject.assignA( 30 );
-		test.equal( mixedObject.a, 32 );
-    test.equal( r, 1002 );
-    
-    var r = mixedObject.assignB( 50 );
-    test.equal( mixedObject.b, 50 );
-    test.equal( r, 2000 );
-
-    test.done();
-  },
-
-  "inherit from  straight JS classes": function( test ){
-    var self = this;
-
-    var JsClass = function( p ){
-      this.a = p;
+    var toCheck = {
+      A1: declare( null, {
+        method1: function( parameter ){
+          return( "A1::method1() called, parameter: " + parameter );
+        }
+      }),
+      A2: declare( Object, {
+        method1: function( parameter ){
+          return( "A2::method1() called, parameter: " + parameter );
+        }
+      })
     }
 
-    JsClass.prototype.assignA = function( p ){
-      this.a = p;
-    };
+    for( var k in toCheck ){
+      var C = toCheck[ k ];
 
-    var DerivedClass = declare( JsClass, {
+      var o = new C();
 
-      // Define the constructor, will initialise `a`
+      test.equal( typeof o.method1, 'function' );
+      test.equal( typeof o.inherited, 'function' );
+      test.equal( typeof o.inheritedAsync, 'function' );
+      test.equal( typeof o.getInherited, 'function' );
+      test.equal( typeof o.instanceOf, 'function' );
+      test.equal( typeof C.extend, 'function' );
+      test.notEqual( typeof C.ActualConstructor, 'function' );
+
+      test.ok( o instanceof C );
+      test.equal( o.__proto__.__proto__.constructor, Object );
+      test.equal( o.method1( 10 ),  k + "::method1() called, parameter: 10" );
+      debugger;
+    }
+    test.done();
+
+  },
+
+
+  "straight class declaration with constructor": function( test ){
+
+    var sentinel = '';
+    var toCheck = {
+      A1: declare( null, {
+        constructor: function( parameter ){
+          sentinel = parameter;
+        }
+      }),
+      A2: declare( Object, {
+        constructor: function( parameter ){
+          sentinel = parameter;
+        }
+      })
+    }
+
+    for( var k in toCheck ){
+      var C = toCheck[ k ];
+
+      var o = new C( k );
+
+      test.equal( sentinel, k );
+      test.equal( typeof C.ActualConstructor, 'function' )
+
+    }
+    test.done();
+  },
+
+  "simple inheritance": function( test ){
+
+
+
+    var sentinel1;
+    var sentinel2;
+
+    var A = declare( null, {
+      name: 'A',
       constructor: function( p ){
-        this.b = p + 1;
+        sentinel1 += "1";
+        sentinel2 += '' + p;
+      },
+      method1: function( parameter ){
+        return "A::method1() called, parameter: " + parameter;
+      },
+      method2: function( parameter ){
+        return "A::method2() called, parameter: " + parameter;
+      },
+    })
+
+    var B = declare( A, {
+      name: 'B',
+      constructor: function( p ){
+        sentinel1 += "2";
+        sentinel2 += '' + p;
+      },
+      method1: function( parameter ){
+        return "B::method1() called, parameter: " + parameter;
+      }
+    })
+
+    var C = declare( B, { name: 'C' } );
+    var D = declare( C, { name: 'D' } );
+    var E = declare( D, { name: 'E' } );
+    
+    sentinel1 = '';
+    sentinel2 = '';
+    var a = new A( 'M' );
+    test.ok( a instanceof A );
+
+    test.equal( sentinel1, '1' );
+    test.equal( sentinel2, 'M' );
+    test.equal( a.method1( 10 ), "A::method1() called, parameter: 10" );
+    test.equal( a.method2( 11 ), "A::method2() called, parameter: 11" );
+
+    sentinel1 = '';
+    sentinel2 = '';
+    var b = new B( 'N' );
+    test.ok( b instanceof A );
+    test.ok( b instanceof B );
+    test.equals( sentinel1, '12' );
+    test.equals( sentinel2, 'NN' );
+    test.ok( compareProtoChain( b, [ 'BASE', 'A', 'B' ] ) );
+    test.equal( b.method1( 12 ), "B::method1() called, parameter: 12" );
+    test.equal( b.method2( 13 ), "A::method2() called, parameter: 13" );
+
+    sentinel1 = '';
+    sentinel2 = '';
+    var e = new E( 10 );
+    test.ok( compareProtoChain( e, [ 'BASE', 'A', 'B', 'C', 'D', 'E' ] ) );
+    test.ok( e instanceof A );
+    test.ok( e instanceof B );
+    test.ok( e instanceof C );
+    test.ok( e instanceof D );
+    test.ok( e instanceof E );
+
+    test.done();
+  },
+
+  "straight inherited": function( test ){
+
+    
+    var A = declare( null, {
+      name: 'A',
+      method1: function( parameter ){
+        return "A::method1() called, parameter: " + parameter;
+      },
+      method2: function( parameter ){
+        return "A::method2() called, parameter: " + parameter;
+      },
+    })
+
+    var B = declare( A, {
+      name: 'B',
+      method1: function( parameter ){
+        return this.inherited( arguments ) + " " + "B::method1() called, parameter: " + parameter;
+      }
+    })
+    var C = declare( B, {
+      name: 'C',
+      method1: function( parameter ){
+        return this.inherited( arguments ) + " " + "C::method1() called, parameter: " + parameter;
+      }
+    })
+
+    var a = new A();
+    var b = new B();
+    var c = new C();
+
+    test.equal( a.method2( 10 ), "A::method2() called, parameter: 10" ) ;
+    test.equal( b.method2( 11 ), "A::method2() called, parameter: 11" ) ;
+    test.equal( c.method2( 12 ), "A::method2() called, parameter: 12" ) ;
+
+    test.equal( a.method1( 13 ), "A::method1() called, parameter: 13" ) ;
+    test.equal( b.method1( 14 ), "A::method1() called, parameter: 14 B::method1() called, parameter: 14" ) ;
+    test.equal( c.method1( 15 ), "A::method1() called, parameter: 15 B::method1() called, parameter: 15 C::method1() called, parameter: 15" ) ;
+
+    test.done();
+  },
+
+  "async inherited": function( test ){
+
+    var A = declare( null, {
+      name: 'A',
+      method1: function( parameter, cb ){
+        cb( null, "A::method1() called, parameter: " + parameter );
+      },
+      method2: function( parameter, cb ){
+
+        cb( null, "A::method2() called, parameter: " + parameter );
       },
     });
 
-    var derivedObject = new DerivedClass( 10 );
-    test.equal( derivedObject.a, 10 );
-    test.equal( derivedObject.b, 11 );
-    derivedObject.assignA( 300 );
-    test.equal( derivedObject.a, 300 );
+    var B = declare( A, {
+      name: 'B',
+      method1: function( parameter, cb ){
+        this.inheritedAsync( arguments, function( err, result ){
+          test.ifError( err );
+
+          cb( null, result + " " + "B::method1() called, parameter: " + parameter )
+        })
+      }
+    });
+    var C = declare( B, {
+      name: 'C',
+      method1: function( parameter, cb ){
+        this.inheritedAsync( arguments, function( err, result ){
+          test.ifError( err );
+
+          cb( null, result + " " + "C::method1() called, parameter: " + parameter )          
+        });
+      }
+    });
+
+    var a = new A();
+    var b = new B();
+    var c = new C();
+
+    a.method2( 10, function( err, result ){
+      test.ifError( err );
+      test.equal( result, "A::method2() called, parameter: 10" ) ;
+
+      b.method2( 11, function( err, result ){
+        test.ifError( err );
+        test.equal( result, "A::method2() called, parameter: 11" ) ;
+
+        c.method2( 12, function( err, result ){
+          test.ifError( err );
+          test.equal( result, "A::method2() called, parameter: 12" ) ;
+
+          a.method1( 13, function( err, result ){
+            test.ifError( err );
+            test.equal( result, "A::method1() called, parameter: 13" ) ;
+
+            b.method1( 14, function( err, result ){
+              test.ifError( err );
+              test.equal( result, "A::method1() called, parameter: 14 B::method1() called, parameter: 14" ) ;
+
+              c.method1( 15, function( err, result ){
+                test.ifError( err );
+                test.equal( result, "A::method1() called, parameter: 15 B::method1() called, parameter: 15 C::method1() called, parameter: 15" ) ;
+
+                test.done();
+              });
+            });
+          });
+        });
+      });
+    });
+
+  },
+
+  "inheriting from pure javascript constructors": function( test ){
+
+   var sentinel1 = 0, sentinel2 = 0, sentinel3 = 0;
+
+   var A = declare( null, {
+
+      name: 'A',
+      
+      method1: function( parameter ){
+        return "A::method1() called, parameter: " + parameter;
+      },
+      method2: function( parameter ){
+        return "A::method2() called, parameter: " + parameter;
+      },  
+      constructor: function( parameter ){
+        sentinel1 ++;
+      }
+    });
+    A.classMethod = function(){
+      return "This is A's method";
+    }
+
+    var B = function(){
+      sentinel1 ++;
+    }
+    B.prototype = Object.create( A.prototype, {
+      constructor: {
+        value: B,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    B.prototype.name = "B";
+
+    // Nice SimpleDeclare class
+    var C = declare( B, {
+
+      name: 'C',
+
+      constructor: function( parameter ){
+        sentinel1 ++;
+      },
+      method1: function( parameter ){
+        return this.inherited( arguments ) + " " + "C::method1() called, parameter: " + parameter;
+      },
+
+    })
+
+    var sentinel1 = 0;
+    var a = new A();
+    test.equal( sentinel1, 1 );
+    
+    var sentinel1 = 0;
+    var c = new C();
+    test.equal( sentinel1, 3 );
+
+    test.equal( c.method1( 10 ), "A::method1() called, parameter: 10 C::method1() called, parameter: 10" ) ;
+    
+    test.done();
+  },
+
+  "extend -- single inheritance": function( test ){
+
+    test.done();
+  },
+
+  "mutiple inheritance": function( test ){
+
+    test.done();
+  },
+
+  "mutiple inheritance -- repeated constructors": function( test ){
+
+    test.done();
+  },
+
+  "mutiple inheritance -- edge cases": function( test ){
+
+    test.done();
+  },
+
+  "extend -- multiple inheritance": function( test ){
 
     test.done();
   },
