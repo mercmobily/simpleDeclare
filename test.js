@@ -39,7 +39,7 @@ function getProtoChain( p ){
 function compareProtoChain( o, list ){
 
   var p = getProtoChain( o );
-  for( var i = 0, l = list.length; i < l; i ++ ){
+  for( var i = 0, l = p.length; i < l; i ++ ){
     if( p[ i ] !== list[ i ] ) return false;
   }
   return true;
@@ -114,8 +114,6 @@ var tests = {
   },
 
   "simple inheritance": function( test ){
-
-
 
     var sentinel1;
     var sentinel2;
@@ -360,26 +358,177 @@ var tests = {
 
   "extend -- single inheritance": function( test ){
 
+    var sentinel1;
+    var sentinel2;
+
+    var A = declare( null, {
+      name: 'A',
+      method1: function( parameter ){
+        return "A::method1() called, parameter: " + parameter;
+      },
+      method2: function( parameter ){
+        return "A::method2() called, parameter: " + parameter;
+      },
+    })
+
+    var B = A.extend( {
+      name: 'B',
+      method1: function( parameter ){
+        return "B::method1() called, parameter: " + parameter;
+      }
+    })
+
+    var C = B.extend( { name: 'C' } );
+    var D = C.extend( { name: 'D' } );
+    var E = D.extend( { name: 'E' } );
+    
+    var a = new A();
+    test.ok( a instanceof A );
+
+    test.equal( a.method1( 10 ), "A::method1() called, parameter: 10" );
+    test.equal( a.method2( 11 ), "A::method2() called, parameter: 11" );
+
+    var b = new B();
+    test.ok( b instanceof A );
+    test.ok( b instanceof B );
+    test.ok( compareProtoChain( b, [ 'BASE', 'A', 'B' ] ) );
+    test.equal( b.method1( 12 ), "B::method1() called, parameter: 12" );
+    test.equal( b.method2( 13 ), "A::method2() called, parameter: 13" );
+
+    var e = new E( 10 );
+    test.ok( compareProtoChain( e, [ 'BASE', 'A', 'B', 'C', 'D', 'E' ] ) );
+    test.ok( e instanceof A );
+    test.ok( e instanceof B );
+    test.ok( e instanceof C );
+    test.ok( e instanceof D );
+    test.ok( e instanceof E );
+
     test.done();
   },
 
   "mutiple inheritance": function( test ){
 
+    var A1 = declare( null, {
+      name: 'A1',
+        method1: function( parameter ){
+          return " A1 " + parameter;
+        },
+      });
+
+    var A2 = declare( null, {
+      name: 'A2',
+      method1: function( parameter ){
+        return ( this.inherited( arguments ) || '' ) + ' ' + "A2 " + parameter;
+      },
+    });
+
+    var A3 = declare( null, {
+      name: 'A3',
+      method1: function( parameter ){
+        return ( this.inherited( arguments ) || '' ) + ' ' + "A3 " + parameter;
+      },
+    });
+
+    var AA = declare( [ A1, A2, A3 ], {
+      name: 'AA',
+      method1: function( parameter ){
+        return ( this.inherited( arguments ) || '' ) + ' ' + "AA " + parameter;
+      },
+         
+    })
+
+    var a1 = new A1();
+    test.equal( a1.method1( 10 ), ' A1 10')
+
+    var a2 = new A2();
+    test.equal( a2.method1( 11 ), ' A2 11')
+
+    var a3 = new A3();
+    test.equal( a3.method1( 12 ), ' A3 12')
+
+    var aa = new AA();
+    test.equal( aa.method1( 13 ), ' A1 13 A2 13 A3 13 AA 13' );
+
+    test.equal( a1 instanceof A1, true );
+    test.equal( a2 instanceof A2, true );
+    test.equal( a3 instanceof A3, true );
+
+    test.equal( aa instanceof A1, false );
+    test.equal( aa instanceof A2, false );
+    test.equal( aa instanceof A3, false );
+    test.equal( aa instanceof AA, true );
+
+    test.equal( aa.instanceOf( A1 ), true );
+    test.equal( aa.instanceOf( A2 ), true );
+    test.equal( aa.instanceOf( A3 ), true );
+    test.equal( aa.instanceOf( AA ), true );
+    
+    test.ok( compareProtoChain( aa, [ 'BASE', 'A1', 'A2', 'A3', 'AA' ] ) );
+
     test.done();
   },
 
-  "mutiple inheritance -- repeated constructors": function( test ){
+  "multiple inheritance -- repeated constructors": function( test ){
 
-    test.done();
-  },
+    var A1 = declare( null, { name: 'A1' } );
+    var A2 = declare( null, { name: 'A2' } );
+    var A3 = declare( null, { name: 'A3' } );
+    var A4 = declare( null, { name: 'A4' } );
+    var A5 = declare( null, { name: 'A5' } );
+    
+    var A = declare( [ A1, A2, A2, A3, A4, A5, A5, A1, A2 ], { name: 'A' } );
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A3', 'A4', 'A5', 'A' ] ) );
+    
+    var A = declare( [ A1, A1, A1 ], { name: 'A' } );
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A' ] ) );
+    
+    var A = declare( [ A1, A1, A1, A2, A1 ], { name: 'A' } );
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A' ] ) );
+    
+    var A12 = declare( [ A1, A2 ], { name: 'A12' } );
+    test.ok( compareProtoChain( new A12(), [ 'BASE', 'A1', 'A2', 'A12' ] ) );
+    
+    var A234 = declare( [ A2, A3, A4 ], { name: 'A234' } );
+    test.ok( compareProtoChain( new A234(), [ 'BASE', 'A2', 'A3', 'A4', 'A234' ] ) );
 
-  "mutiple inheritance -- edge cases": function( test ){
+    // A2 gets deleted from A234 as it was already added by A12
+    var A = declare( [ A12, A234 ], { name: 'A' });
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A12', 'A3', 'A4', 'A234', 'A' ] ) );
 
+    // instanceOf works with multiple inheritance    
+    test.ok( (new A()).instanceOf( A1 ) );
+    test.ok( (new A()).instanceOf( A2 ) );
+    test.ok( (new A()).instanceOf( A12 ) );
+        
+    // A12 doesn't add A2 because it was already added
+    var A = declare( [ A2, A12, A234 ], { name: 'A' });
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A2', 'A1', 'A12', 'A3', 'A4', 'A234', 'A' ] ) );
+    
+    // A12 doesn't add A2, A234 doesn't add A4, as they were defined beforehand
+    var A = declare( [ A2, A4, A12, A234 ], { name: 'A' });
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A2', 'A4', 'A1', 'A12', 'A3', 'A234', 'A' ] ) );
+    
+    // Trailing constructors ignored as already added
+    var A = declare( [ A12, A234, A1, A4 ], { name: 'A' });
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A12', 'A3', 'A4', 'A234', 'A' ] ) );
+    
+    // Trailing constructors ignored as already added, plus a new trailing one
+    var A = declare( [ A12, A234, A1, A4, A5 ], { name: 'A' });
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A12', 'A3', 'A4', 'A234', 'A5', 'A' ] ) );
+    
     test.done();
   },
 
   "extend -- multiple inheritance": function( test ){
 
+    var A1 = declare( null, { name: 'A1' } );
+    var A2 = declare( null, { name: 'A2' } );
+    var A3 = declare( null, { name: 'A3' } );
+    var A4 = declare( null, { name: 'A4' } );
+    
+    var A = A1.extend( [ A2, A3 ], { name: 'A' });
+    test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A3', 'A' ] ) );
+    
     test.done();
   },
 
