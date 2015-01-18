@@ -313,11 +313,9 @@ For example:
 As you can see, everything works 100% fine: all constructors run in the right order.
 What actually happens behind the scenes is that SimpleDeclare's standard constructor function will go through the whole prototype chain starting from the innermost element, and will execute every constructor one after the other.
 
-<!--Note that I made sure that `B` behaves like a good citizen, and invokes `A's` constructor. (This happens automatically with SimpleDeclare's constructors, which always invoke the "parent" constructor before invoking their own initialisation function).-->
-
 # Simple inheritance using `extend()`
 
-Each constructor returned by SimpleDeclare comes with an `extend` method that allows you to extend it.
+Each constructor returned by SimpleDeclare comes with an `extend()` method that allows you to inherit from it.
 For example:
 
 ````Javascript
@@ -530,13 +528,6 @@ So: first of all, `AA` is checked, and it's expanded into `[ AA, A3, A2, A1 ]` a
 
 If you wanted to sum up how this works in one sentence, this esentence would be: "In multiple inheritance, copies of the constructors are added left to right, including constructors in prototype chains, without ever adding the same constructor twice". In this case, `A1` and `A2` were already duplicate by the time we got to `D`, which is why `A1` and `A2` were ignored.
 
-<!--
-## Vanilla constructors and multiple inheritance
-
-As I wrote above, SimpleDeclare creates standard constructor methods; the same applies to plain Javascript methods, that are handles completely fine by SimpleDeclare.
-
-However, something needs to be said about calling the parent's constructor. As I wrote in this guide, every SimpleDeclare constructor will attempt to call the parent's constructor. Ideally, the vanilla constructor would do the same thing, in order not to break the calling chain. The problem with multiple inheritance is that you never know where 
--->
 
 # Multiple inheritance using `extend()`
 
@@ -632,7 +623,7 @@ When declaring a constructor, you can pass a `constructor` parameter with initia
     */
 ````
 
-So, `A.ActualConstructor` will have the function passed as `constructor`. When running `a = new A()`, you are actually running a stock function that will run all constructors in the prototype chain, starting from the innermost one and moving all the way out. The stock function is smart about this: it will run this cycle only when it's being called directly as the actual constructor. In any other cases, it will run ActualConstructor.
+So, `A.ActualConstructor` will point to the function passed in `constructor`. When running `a = new A()` you are actually running a stock function that, when run directly to construct an object (like in this case), will run all constructors in the prototype chain, starting from the innermost one and moving all the way out. To understand more how this mechansm works, look at the `ReturnedCtor` function in the module's code.
 
 #### `OriginalConstructor`
 
@@ -644,15 +635,15 @@ When creating a constructor, a numbe of parameters are made available to the pro
 
 Here they are.
 
-#### `getInherited()`
+#### `getInherited( fn )`
 
 Returns the inherited function from the parent prototype, without running it
 
-#### `inherited()`
+#### `inherited( f, arguments )`
 
 Runs the inherited function from the parent prototype
 
-#### `inheritedAsync()`
+#### `inheritedAsync( f, arguments)`
 
 Runs the inherited function from the parent prototype (asynchronous fashion)
 
