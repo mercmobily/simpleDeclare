@@ -36,6 +36,7 @@ SimpleDeclare is the Holy Grail of OOP implementation in Javascript, working _wi
 
     a.method1(); // => A::method1() called!
     console.log( a.__proto__ === A.prototype ); // => true
+    console.log( a instanceof A ); // => true
     console.log( A.extend ); // => [Function]
 ````
 
@@ -44,7 +45,7 @@ You can see that `A`'s prototype also contains extra methods:
 
 * `inherited()` and `inheritedAsync()` (which will call `method1()` of the parent);
 * `instanceOf()` (which checks if an object is the instance of a constructor, even when using multiple inheritance -- more about this later);
-* getInherited() (returns the corresponding function in the parent).
+* `getInherited()` (returns the corresponding function in the parent).
 
 
 # Simple inheritance from Object with initialisation function
