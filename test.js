@@ -196,14 +196,14 @@ var tests = {
 
     var B = declare( A, {
       name: 'B',
-      method1: function( parameter ){
-        return this.inherited( arguments ) + " " + "B::method1() called, parameter: " + parameter;
+      method1: function f( parameter ){
+        return this.inherited( f, arguments ) + " " + "B::method1() called, parameter: " + parameter;
       }
     })
     var C = declare( B, {
       name: 'C',
-      method1: function( parameter ){
-        return this.inherited( arguments ) + " " + "C::method1() called, parameter: " + parameter;
+      method1: function f( parameter ){
+        return this.inherited( f, arguments ) + " " + "C::method1() called, parameter: " + parameter;
       }
     })
 
@@ -237,8 +237,8 @@ var tests = {
 
     var B = declare( A, {
       name: 'B',
-      method1: function( parameter, cb ){
-        this.inheritedAsync( arguments, function( err, result ){
+      method1: function f( parameter, cb ){
+        this.inheritedAsync( f, arguments, function( err, result ){
           test.ifError( err );
 
           cb( null, result + " " + "B::method1() called, parameter: " + parameter )
@@ -247,8 +247,8 @@ var tests = {
     });
     var C = declare( B, {
       name: 'C',
-      method1: function( parameter, cb ){
-        this.inheritedAsync( arguments, function( err, result ){
+      method1: function f( parameter, cb ){
+        this.inheritedAsync( f, arguments, function( err, result ){
           test.ifError( err );
 
           cb( null, result + " " + "C::method1() called, parameter: " + parameter )          
@@ -337,8 +337,8 @@ var tests = {
       constructor: function( parameter ){
         sentinel1 ++;
       },
-      method1: function( parameter ){
-        return this.inherited( arguments ) + " " + "C::method1() called, parameter: " + parameter;
+      method1: function f( parameter ){
+        return this.inherited( f, arguments ) + " " + "C::method1() called, parameter: " + parameter;
       },
 
     })
@@ -417,22 +417,22 @@ var tests = {
 
     var A2 = declare( null, {
       name: 'A2',
-      method1: function( parameter ){
-        return ( this.inherited( arguments ) || '' ) + ' ' + "A2 " + parameter;
+      method1: function f( parameter ){
+        return ( this.inherited( f, arguments ) || '' ) + ' ' + "A2 " + parameter;
       },
     });
 
     var A3 = declare( null, {
       name: 'A3',
-      method1: function( parameter ){
-        return ( this.inherited( arguments ) || '' ) + ' ' + "A3 " + parameter;
+      method1: function f( parameter ){
+        return ( this.inherited( f, arguments ) || '' ) + ' ' + "A3 " + parameter;
       },
     });
 
     var AA = declare( [ A1, A2, A3 ], {
       name: 'AA',
-      method1: function( parameter ){
-        return ( this.inherited( arguments ) || '' ) + ' ' + "AA " + parameter;
+      method1: function f( parameter ){
+        return ( this.inherited( f, arguments ) || '' ) + ' ' + "AA " + parameter;
       },
          
     })

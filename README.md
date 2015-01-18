@@ -3,9 +3,10 @@ simpleDeclare
 
 SimpleDeclare is the Holy Grail of OOP implementation in Javascript, working _with_ Javascript rather than against it. Highlights:
 
+* Works in strict mode (!)
 * Works with Javascript, as close to the metal as possible, with possibility to inherit from normal Javascript constructors
 * Single inheritance and multiple inheritance
-* Strong implementation of `this.inherited()` (works the same way ECMA6 will eventually give us)
+* Strong implementation of `this.inherited(fn, arguments)` (works the same way ECMA6 will eventually give us). Yes, _in strict mode_!
 * Easy calling of asyncronous super methods with `this.inheritedAsync()`
 * Automatic execution of all constructors in the right order
 * Automatic inheritance of class-wide methods (they are copied over)
@@ -149,7 +150,6 @@ The `b` variable is recognised as `instanceof`, as it should.
 
 A inherited constructor will often redefine a method; you will often want to run the "super" method that was redefined. SimpleDeclare makes this very possible, offering a very robust implementation of `this.inherited()`:
 
-
 ````Javascript
     var A = declare( null, {
 
@@ -168,9 +168,9 @@ A inherited constructor will often redefine a method; you will often want to run
 
       name: 'B',
  
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log("B::method1() called, now calling the 'super' method");
-        this.inherited( arguments );
+        this.inherited( f, arguments );
       }
     })
 
@@ -185,11 +185,11 @@ A inherited constructor will often redefine a method; you will often want to run
     */
 ````    
 
-The `this.inherited()` method is available to any object created by a SimpleDeclare constructor. It accepts an array of values, representing the parameters to pass to the super function. Its implementation is very fast (the only CPU-intensive operation is looking for the method itself in the object's own list of prototypes). When ECMA 6, doing this will be trivial.  
+The `this.inherited()` method is available to any object created by a SimpleDeclare constructor. The first parameter is always a reference to the function calling it. When using `this.inherited()`, a common pattern is to name the function `f` and always pass `f` as the first argument of `this.inherited()`. This extra parameter is what makes SimpleDeclare work in safe mode (`this.inherited()` itself doesn't need to find out what its `callee` is, and checking out `callee` is forbidden in safe mode). The second parameter is an array of values, representing the parameters to pass to the super function. Its implementation is very fast (the only CPU-intensive operation is looking for the method itself in the object's own list of prototypes). When ECMA 6 becomes the standard, in an hopefully not-so-distant future, even this step will be immediate.  
 
 # Calling the super function with node-style callback
 
-Calling the super function is just a matter of typing `this.inherited(arguments)`. What if the super function is a node-style async method that accepts a callback as its last parameter? Simple:
+Calling the super function is just a matter of typing `this.inherited(f, arguments)`. What if the super function is a node-style async method that accepts a callback as its last parameter? Simple:
 
 
 ````Javascript
@@ -212,10 +212,10 @@ Calling the super function is just a matter of typing `this.inherited(arguments)
 
       name: 'B',
  
-      method1: function( parameter, cb ){
+      method1: function f( parameter, cb ){
         console.log( "B::method1() called with parameter: ", parameter );
         console.log( "Now calling inherited method...");
-        this.inheritedAsync( arguments, function( err, res ){
+        this.inheritedAsync( f, arguments, function( err, res ){
 
           // Error in the inherited function: propagate err, node style
           if( err ) return cb( err );
@@ -277,8 +277,6 @@ For example:
 
     // Plain vanilla class (ugly!)
     var B = function(){
-      //arguments.callee.prototype.__proto__.constructor.apply( this, arguments );
-      //A.apply( this, arguments );
       console.log("B's constructor called!");
     }
     B.prototype = Object.create( A.prototype, {
@@ -342,27 +340,27 @@ You can easily inherit from multiple constructors:
 ````Javascript
    var A1 = declare( null, {
       name: 'A1',
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "A1::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments);
         return "Returned by A1::method1";
       },
     });
 
    var A2 = declare( null, {
       name: 'A2',
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "A2::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments);
         return "Returned by A2::method1";
       },
     });
 
    var A3 = declare( null, {
       name: 'A3',
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "A3::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments);
         return "Returned by A3::method1";
       },
     });
@@ -423,9 +421,9 @@ Let me explain with some code:
 ````Javascript
     var A1 = declare( null, {
       name: 'A1',
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "A1::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by A1::method1";
       },
     });
@@ -434,34 +432,34 @@ Let me explain with some code:
       name: 'A2',
       method1: function( parameter ){
         console.log( "A2::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by A2::method1";
       },
     });
 
     var A3 = declare( null, {
       name: 'A3',
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "A3::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by A3::method1";
       },
     });
 
     var AA = declare( [ A1, A2, A3 ], {
       name: 'AA', 
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "AA::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by AA::method1";
       },
     });
 
     var B = declare( null, {
       name: 'B', 
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "B::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by B::method1";
       },
     });
@@ -469,9 +467,9 @@ Let me explain with some code:
 
     var L = declare( null, {
       name: 'L',
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "L::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by L::method1";
       },
     });
@@ -480,7 +478,7 @@ Let me explain with some code:
       name: 'D',
       method1: function( parameter ){
         console.log( "D::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by D::method1";
       },
     });
@@ -546,18 +544,18 @@ You can use `extend()` for multiple inheritance too. For example:
 ````Javascript
 var M1 = declare( null, {
       name: 'M1',
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "M1::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited(f, arguments );
         return "Returned by M1::method1";
       },
     });
 
     var M2 = declare( null, {
       name: 'M2',
-      method1: function( parameter ){
+      method1: function f( parameter ){
         console.log( "M2::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by M2::method1";
       },
     });
@@ -566,7 +564,7 @@ var M1 = declare( null, {
       name: 'A',
       method1: function( parameter ){
         console.log( "A::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by A::method1";
       },
     });
@@ -576,7 +574,7 @@ var M1 = declare( null, {
       name: 'B', 
       method1: function( parameter ){
         console.log( "B::method1() called, parameter: ", parameter );
-        this.inherited(arguments);
+        this.inherited( f, arguments );
         return "Returned by B::method1";
       },
     })
