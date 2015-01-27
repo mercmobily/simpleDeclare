@@ -168,52 +168,6 @@
 
             }
           };
-
-          /*
-          // Second implementation. I don't like the lame way it checks if it's within ActualConstructor. Plus,
-          // BIG problem: it only differentiates SimpleDeclare methods and Non-SimpleDeclare methods.
-          var ReturnedCtor = function(){
-
-            // Goes through the prototype chain and execute every single constructor.
-            // If the constructor has the ActualConstructor attribute, then it's a SimpleDeclare
-            // constructor 
-            var l = [];
-            var o = this;
-            while( o = o.__proto__ ){
-              // If it's a SimpleDeclare constructor, add the ActualConstructor instead
-              if( o.constructor.toString() === ReturnedCtor.toString() ){
-                if( o.constructor.ActualConstructor ) l.push( o.constructor.ActualConstructor );
-              }
-              // Otherwise, add the constructor
-              else l.push(  o.constructor );
-            }
-            for( var i = l.length - 1; i >=0; i -- ){
-              l[ i ].apply( this, arguments );
-            }
-
-          };
-          */
-
-           /*
-          // First implementation. Scrapped because other constructors might break the chain
-          // The constructor that will get returned. It's basically a function
-          // that calls the parent's constructor and then protoMixin.constructor.
-          // It works with plain JS constructor functions (as long as they have,
-          //  as they SHOULD, `prototype.constructor` set)
-          var ReturnedCtor = function(){
-
-            // Run the parent's constructor if present
-            if( ReturnedCtor.prototype.__proto__  && ReturnedCtor.prototype.__proto__.constructor !== Object ){
-              ReturnedCtor.prototype.__proto__.constructor.apply( this, arguments );
-            }
-
-            // The stock constructor will simply run `ActualConstructor` if it's found.
-            if( ReturnedCtor.hasOwnProperty( 'ActualConstructor' ) ){
-              ReturnedCtor.ActualConstructor.apply( this, arguments );
-            }
-
-          };
-          */
           
           if( protoMixin === null ) protoMixin = {};
           if( typeof( protoMixin ) !== 'object' ) protoMixin = {};
@@ -255,10 +209,10 @@
             if( protoMixin.hasOwnProperty( 'constructor' ) ) ReturnedCtor.ActualConstructor = protoMixin.constructor;
           }
 
-          // We are un the process of cloning an existing constructor.
+          // We are in the process of cloning an existing constructor.
           // When doing that:
           // * ReturnedCtor's ActualConstructor will be set to the Source's ActualConstructor.
-          //   This will ensure that the stock constructor (that just invoks ActualConstructor) works.
+          //   This will ensure that the stock constructor (that just invokes ActualConstructor) works.
           // * ReturnedCtor's OriginalConstructor will be set to the Source's ActualConstructor (or the souce itself).
           //   This will ensure that we have a path to the actual constructor we actually cloned,
           //   so that instanceOf() will work (by checking ActualConstructor whenever possible)
