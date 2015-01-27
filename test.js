@@ -73,7 +73,7 @@ var tests = {
       test.equal( typeof o.getInherited, 'function' );
       test.equal( typeof o.instanceOf, 'function' );
       test.equal( typeof C.extend, 'function' );
-      test.notEqual( typeof C.ActualConstructor, 'function' );
+      //test.notEqual( typeof C.ActualConstructor, 'function' );
 
       test.ok( o instanceof C );
       test.equal( o.__proto__.__proto__.constructor, Object );
