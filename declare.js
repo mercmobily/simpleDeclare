@@ -130,8 +130,8 @@
           
         var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
 
+          var ActualConstructor;
 
-          // Third implementation. The holy grail?
           var ReturnedCtor = function(){
 
             // The object's main constructor is being run. It will be responsible of
@@ -151,22 +151,11 @@
               for( var i = l.length - 1; i >=1; i -- ){
                 l[ i ].apply( this, arguments );
               }
-              // Itself. Since I *know* this is a SimpleDeclare constructor,
-              // run ActualConstructor if available
-              var p = Object.getPrototypeOf( this );
-              if( p.constructor.hasOwnProperty( 'ActualConstructor' ) ){
-                p.constructor.ActualConstructor.apply( this, arguments );
-              }
-
-            // This is not the main object's constructor method -- plus, it's OBVIOUSLY
-            // a SimpleDeclare constructor. Simply run the ActualConstructor if available
-            } else {
-
-              if( ReturnedCtor.hasOwnProperty( 'ActualConstructor' ) ){
-                ReturnedCtor.ActualConstructor.apply( this, arguments );
-              }
-
             }
+
+            // Itself. Since I *know* this is a SimpleDeclare constructor,
+            // run ActualConstructor if available
+            if( ActualConstructor ) ActualConstructor.apply( this, arguments );
           };
           
           if( protoMixin === null ) protoMixin = {};
@@ -175,7 +164,6 @@
           // Create the new function's prototype. It's a new object, which happens to
           // have its own prototype (__proto__) set as the superclass' prototype and the
           // `constructor` attribute set as FromCtor (the one we are about to return)
-
 
           ReturnedCtor.prototype = Object.create(FromCtor.prototype, {
             constructor: {
@@ -206,7 +194,7 @@
           // a source of methods that just got added to the prototype).
           // ActualConstructor will be set to the `constructor` property of protoMixin
           if( ! SourceOfProto ){
-            if( protoMixin.hasOwnProperty( 'constructor' ) ) ReturnedCtor.ActualConstructor = protoMixin.constructor;
+            if( protoMixin.hasOwnProperty( 'constructor' ) ) ActualConstructor = protoMixin.constructor;
           }
 
           // We are in the process of cloning an existing constructor.
@@ -217,7 +205,7 @@
           //   This will ensure that we have a path to the actual constructor we actually cloned,
           //   so that instanceOf() will work (by checking ActualConstructor whenever possible)
           if( SourceOfProto ){
-            if( SourceOfProto.hasOwnProperty('ActualConstructor') ) ReturnedCtor.ActualConstructor = SourceOfProto.ActualConstructor;
+            ActualConstructor = SourceOfProto;
             ReturnedCtor.OriginalConstructor = SourceOfProto.OriginalConstructor || SourceOfProto;
           }
 
@@ -241,7 +229,7 @@
                 // It's one of the attributes' in Function()'s prototype: skip
                 if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) continue;
                 // It's one of the attributes managed by simpleDeclare: skip
-                if( [ 'ActualConstructor', 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) continue;
+                if( [ 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) continue;
                 Dest[ property ] = Source[ property ];
               }
             }

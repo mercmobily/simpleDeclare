@@ -107,7 +107,7 @@ var tests = {
       var o = new C( k );
 
       test.equal( sentinel, k );
-      test.equal( typeof C.ActualConstructor, 'function' )
+      //test.equal( typeof C.ActualConstructor, 'function' )
 
     }
     test.done();
