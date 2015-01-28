@@ -4,15 +4,18 @@ simpleDeclare
 SimpleDeclare is the Holy Grail of OOP implementation in Javascript, working _with_ Javascript rather than against it. Highlights:
 
 * Works in strict mode (!)
+* Well written, and well commented, code
+* Works both as a CommonJS module and as a RequireJS module
+* Works with IE9 up
 * Works with Javascript, as close to the metal as possible, with possibility to inherit from normal Javascript constructors
 * Single inheritance and multiple inheritance
 * Strong implementation of `this.inherited(fn, arguments)` (works the same way ECMA6 will eventually give us). Yes, _in strict mode_!
 * Easy calling of asyncronous super methods with `this.inheritedAsync()`
 * Automatic execution of all constructors in the right order
 * Automatic inheritance of class-wide methods (they are copied over)
-* `extend()` method available to extend specific constructors 
-* Minimum amounts of meta-data, none of which is strictly necessary
-* Fully unit-tested and currently used as the foundation in [Hotplate](https://github.com/mercmobily/hotplate) as most of Hotplate's foundation modules.
+* `extend()` method available to extend specific SimpleDeclare constructors 
+* Bare minimum amounts of meta-data (in fact, only `OriginalConstructor`) and minimum amount of prototype pollution
+* Fully unit-tested and currently used as the foundation in [Hotplate](https://github.com/mercmobily/hotplate) as most of Hotplate's foundation modules
 
 # Simple inheritance from Object
 
