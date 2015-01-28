@@ -50,7 +50,7 @@ var tests = {
   "straight class declarations": function( test ){
 
     var toCheck = {
-      A1: declare( null, {
+      A1: declare( Object, {
         method1: function( parameter ){
           return( "A1::method1() called, parameter: " + parameter );
         }
@@ -89,7 +89,7 @@ var tests = {
 
     var sentinel = '';
     var toCheck = {
-      A1: declare( null, {
+      A1: declare( Object, {
         constructor: function( parameter ){
           sentinel = parameter;
         }
@@ -118,7 +118,7 @@ var tests = {
     var sentinel1;
     var sentinel2;
 
-    var A = declare( null, {
+    var A = declare( Object, {
       name: 'A',
       constructor: function( p ){
         sentinel1 += "1";
@@ -184,7 +184,7 @@ var tests = {
   "straight inherited": function( test ){
 
     
-    var A = declare( null, {
+    var A = declare( Object, {
       name: 'A',
       method1: function( parameter ){
         return "A::method1() called, parameter: " + parameter;
@@ -224,7 +224,7 @@ var tests = {
 
   "async inherited": function( test ){
 
-    var A = declare( null, {
+    var A = declare( Object, {
       name: 'A',
       method1: function( parameter, cb ){
         cb( null, "A::method1() called, parameter: " + parameter );
@@ -298,7 +298,7 @@ var tests = {
 
    var sentinel1 = 0, sentinel2 = 0, sentinel3 = 0;
 
-   var A = declare( null, {
+   var A = declare( Object, {
 
       name: 'A',
       
@@ -361,7 +361,7 @@ var tests = {
     var sentinel1;
     var sentinel2;
 
-    var A = declare( null, {
+    var A = declare( Object, {
       name: 'A',
       method1: function( parameter ){
         return "A::method1() called, parameter: " + parameter;
@@ -408,21 +408,21 @@ var tests = {
 
   "mutiple inheritance": function( test ){
 
-    var A1 = declare( null, {
+    var A1 = declare( Object, {
       name: 'A1',
         method1: function( parameter ){
           return " A1 " + parameter;
         },
       });
 
-    var A2 = declare( null, {
+    var A2 = declare( Object, {
       name: 'A2',
       method1: function f( parameter ){
         return ( this.inherited( f, arguments ) || '' ) + ' ' + "A2 " + parameter;
       },
     });
 
-    var A3 = declare( null, {
+    var A3 = declare( Object, {
       name: 'A3',
       method1: function f( parameter ){
         return ( this.inherited( f, arguments ) || '' ) + ' ' + "A3 " + parameter;
@@ -470,11 +470,11 @@ var tests = {
 
   "multiple inheritance -- repeated constructors": function( test ){
 
-    var A1 = declare( null, { name: 'A1' } );
-    var A2 = declare( null, { name: 'A2' } );
-    var A3 = declare( null, { name: 'A3' } );
-    var A4 = declare( null, { name: 'A4' } );
-    var A5 = declare( null, { name: 'A5' } );
+    var A1 = declare( Object, { name: 'A1' } );
+    var A2 = declare( Object, { name: 'A2' } );
+    var A3 = declare( Object, { name: 'A3' } );
+    var A4 = declare( Object, { name: 'A4' } );
+    var A5 = declare( Object, { name: 'A5' } );
     
     var A = declare( [ A1, A2, A2, A3, A4, A5, A5, A1, A2 ], { name: 'A' } );
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A3', 'A4', 'A5', 'A' ] ) );
@@ -521,10 +521,10 @@ var tests = {
 
   "extend -- multiple inheritance": function( test ){
 
-    var A1 = declare( null, { name: 'A1' } );
-    var A2 = declare( null, { name: 'A2' } );
-    var A3 = declare( null, { name: 'A3' } );
-    var A4 = declare( null, { name: 'A4' } );
+    var A1 = declare( Object, { name: 'A1' } );
+    var A2 = declare( Object, { name: 'A2' } );
+    var A3 = declare( Object, { name: 'A3' } );
+    var A4 = declare( Object, { name: 'A4' } );
     
     var A = A1.extend( [ A2, A3 ], { name: 'A' });
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A3', 'A' ] ) );

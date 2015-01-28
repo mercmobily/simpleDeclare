@@ -34,7 +34,8 @@
             currentPoint = Object.getPrototypeOf( currentPoint );
           }
 
-          // If nothing was found, return null
+          // Return crrentPoint. Note that if the search was unsccessful,
+          // currentPoint will be `null`
           return { base: currentPoint, key: k };
         }
 
@@ -83,16 +84,25 @@
         // of constructor created with simpleDeclare (only if needed)
         var extend = function( SuperCtor, protoMixin ){
 
-          // Only one argument was passed and it's an object: it's protoMixin.
-          // So, just return declare with `this` as base class and protoMixin
+          // Only one argument was passed: it's either this form:
+          //   * EITHER B = A.extend( { p1: 10, p2: 20 } ) -- only the protoMixin was passed
+          //   * OR B = A.extend( C ) -- B will inherit from the mixin of [ A, C ]
+          //   * OR B = A.extend( [ C, D, E ] ) -- B will inherit from the mixin of [ A, C, D, E ] 
           if( arguments.length === 1 ){
 
+            // If SuperCtor is a normal object, then it was called in the format
+            // B = A.extend( { p1: 10, p2:20 } ); Just call declare with [ this ] and only
+            // constructor parameter. This is the most common case.
             if( typeof( SuperCtor ) === 'object' && SuperCtor !== null ) return declare( [ this ], SuperCtor );
+
+            // If SuperCtor is not a normal object, then protoMixin is assumed to be empty
             else protoMixin = {};
           }
           
-          // SuperCtor is is either a constructor function, or an array of constructor functions
+          // SuperCtor is is either a constructor function, or an array of constructor functions.
           // Make up finalSuperCtorArray according to it.
+          // NOTE that if it's not neither of them, then an error is thrown as the first parameter
+          // was obviously meaningless
           var finalSuperCtorArray = [ this ];  
           if( Array.isArray( SuperCtor ) ){  
             for( var i = 0, l = SuperCtor.length; i < l; i ++ ) finalSuperCtorArray.push( SuperCtor[ i ] ); 
@@ -158,8 +168,8 @@
             if( ActualConstructor ) ActualConstructor.apply( this, arguments );
           };
           
-          if( protoMixin === null ) protoMixin = {};
-          if( typeof( protoMixin ) !== 'object' ) protoMixin = {};
+          // protoMixin MUST be a valid, not-null object
+          if( typeof( protoMixin ) !== 'object' || protoMixin === null) protoMixin = {};
           
           // Create the new function's prototype. It's a new object, which happens to
           // have its own prototype (__proto__) set as the superclass' prototype and the
@@ -215,8 +225,12 @@
 
         var copyClassMethods = function( Source, Dest ){
 
-          // Copy class methods over
-          if( Source !== null && Source !== Object ){
+          // Source class needs to be a function
+          if( typeof( Source) !== 'function' ) throw new Error("Error: source constructor must be a function");
+
+          // Copy class methods over, EXCEPT if it's Object (the base class) which is ALWAYS
+          // gracefully ignored
+          if( Source !== Object ){
 
             var ownProps = Object.getOwnPropertyNames( Source );
             for( var i = 0, l = ownProps.length; i < l; i ++){
@@ -266,17 +280,31 @@
           var i, l, ii, ll;
           var proto;
           
-          // Check that SuperCtorList is the right type
-          if( SuperCtorList !== null && typeof( SuperCtorList ) !== 'function' && !Array.isArray( SuperCtorList ) ){
-            throw new Error( "SuperCtor parameter illegal in declare");
+          // No arguments at all: inheriting straight from Object, no extra parameters
+          if( arguments.length === 0 ){
+            console.log("A");
+            superCtorList = Object;
+            protoMixin = {}
           }
 
-          // Normalise SuperCtor into an array
-          if( SuperCtorList === null ) SuperCtorList = [];
-          if( typeof( SuperCtorList ) === 'function' ) SuperCtorList = [ SuperCtorList ];
+          // If only one parameter was passed, and it was an object, it's assumed to be
+          // in the form `B = declare( { p1: 10, p2: 20 } )`, inheriting straight from Object
+          if( arguments.length === 1  && typeof( SuperCtorList ) === 'object' && SuperCtorList !== null ){
+            console.log("B", arguments );;
+            protoMixin = SuperCtorList;
+            SuperCtorList = Object;
+          }
+     
 
+          // Check that SuperCtorList is either a constructor function or an array (of constructor functions)
+          if( typeof( SuperCtorList ) !== 'function' && !Array.isArray( SuperCtorList ) ){
+            throw new Error( "SuperCtor parameter illegal in declare: must be a function or an array");
+          }
+
+          // Normalise SuperCtor into a 1-element array if it was a function
+          if( typeof( SuperCtorList ) === 'function' ) SuperCtorList = [ SuperCtorList ];
           
-          // No parameters: inheriting from Object directly, no inheritance at all
+          // No parameters: inheriting from Object directly, no multiple inheritance
           if( SuperCtorList.length === 0 ){
             MixedClass = Object;
           }
@@ -291,6 +319,7 @@
           } else {
             MixedClass = Object;
 
+            console.log("C ", SuperCtorList );
             // NOW:
             // Go through every __proto__ of every derivative class, and augment
             // MixedClass by inheriting from A COPY OF each one of them.
@@ -368,7 +397,7 @@
         };
 
         // Returned extra: declarableObject
-        declare.extendableObject = declare( null );
+        declare.extendableObject = declare( Object );
 
         exports = module.exports = declare;
       

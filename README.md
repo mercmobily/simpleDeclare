@@ -17,7 +17,7 @@ SimpleDeclare is the Holy Grail of OOP implementation in Javascript, working _wi
 # Simple inheritance from Object
 
 ````Javascript
-    var A = declare( null, {
+    var A = declare( Object, {
       method1: function( parameter ){
         console.log("A::method1() called!")
       },
@@ -51,7 +51,7 @@ You can see that `A`'s prototype also contains extra methods:
 # Simple inheritance from Object with initialisation function
 
 ````Javascript
-    var A = declare( null, {
+    var A = declare( Object, {
       constructor: function( p ){
         console.log("A's constructor called with parameter: " + p )
       },
@@ -70,7 +70,7 @@ Here, a `constructor` attribute is passed: it will be called every time a new in
 # Simple inheritance from another constructor
 
 ````Javascript
-    var A = declare( null, {
+    var A = declare( Object, {
 
       name: 'A',
 
@@ -152,7 +152,7 @@ The `b` variable is recognised as `instanceof`, as it should.
 A inherited constructor will often redefine a method; you will often want to run the "super" method that was redefined. SimpleDeclare makes this very possible, offering a very robust implementation of `this.inherited()`:
 
 ````Javascript
-    var A = declare( null, {
+    var A = declare( Object, {
 
       name: 'A',
 
@@ -194,7 +194,7 @@ Calling the super function is just a matter of typing `this.inherited(f, argumen
 
 
 ````Javascript
-  var A = declare( null, {
+  var A = declare( Object, {
 
       name: 'A',
 
@@ -260,7 +260,7 @@ For example:
 ````Javascript
 
    // Nice SimpleDeclare class
-   var A = declare( null, {
+   var A = declare( Object, {
 
       name: 'A',
 
@@ -319,7 +319,7 @@ Each constructor returned by SimpleDeclare comes with an `extend()` method that 
 For example:
 
 ````Javascript
-    var A = declare( null, {
+    var A = declare( Object, {
       method: function(){
         console.log( "Hello" );
       }
@@ -337,7 +337,7 @@ For example:
 You can easily inherit from multiple constructors:
 
 ````Javascript
-   var A1 = declare( null, {
+   var A1 = declare( Object, {
       name: 'A1',
       method1: function f( parameter ){
         console.log( "A1::method1() called, parameter: ", parameter );
@@ -346,7 +346,7 @@ You can easily inherit from multiple constructors:
       },
     });
 
-   var A2 = declare( null, {
+   var A2 = declare( Object, {
       name: 'A2',
       method1: function f( parameter ){
         console.log( "A2::method1() called, parameter: ", parameter );
@@ -355,7 +355,7 @@ You can easily inherit from multiple constructors:
       },
     });
 
-   var A3 = declare( null, {
+   var A3 = declare( Object, {
       name: 'A3',
       method1: function f( parameter ){
         console.log( "A3::method1() called, parameter: ", parameter );
@@ -418,7 +418,7 @@ In simple terms, this means that:
 Let me explain with some code:
 
 ````Javascript
-    var A1 = declare( null, {
+    var A1 = declare( Object, {
       name: 'A1',
       method1: function f( parameter ){
         console.log( "A1::method1() called, parameter: ", parameter );
@@ -427,7 +427,7 @@ Let me explain with some code:
       },
     });
 
-    var A2 = declare( null, {
+    var A2 = declare( Object, {
       name: 'A2',
       method1: function( parameter ){
         console.log( "A2::method1() called, parameter: ", parameter );
@@ -436,7 +436,7 @@ Let me explain with some code:
       },
     });
 
-    var A3 = declare( null, {
+    var A3 = declare( Object, {
       name: 'A3',
       method1: function f( parameter ){
         console.log( "A3::method1() called, parameter: ", parameter );
@@ -454,7 +454,7 @@ Let me explain with some code:
       },
     });
 
-    var B = declare( null, {
+    var B = declare( Object, {
       name: 'B', 
       method1: function f( parameter ){
         console.log( "B::method1() called, parameter: ", parameter );
@@ -464,7 +464,7 @@ Let me explain with some code:
     });
 
 
-    var L = declare( null, {
+    var L = declare( Object, {
       name: 'L',
       method1: function f( parameter ){
         console.log( "L::method1() called, parameter: ", parameter );
@@ -534,7 +534,7 @@ If you wanted to sum up how this works in one sentence, this esentence would be:
 You can use `extend()` for multiple inheritance too. For example:
 
 ````Javascript
-var M1 = declare( null, {
+var M1 = declare( Object, {
       name: 'M1',
       method1: function f( parameter ){
         console.log( "M1::method1() called, parameter: ", parameter );
@@ -543,7 +543,7 @@ var M1 = declare( null, {
       },
     });
 
-    var M2 = declare( null, {
+    var M2 = declare( Object, {
       name: 'M2',
       method1: function f( parameter ){
         console.log( "M2::method1() called, parameter: ", parameter );
@@ -552,7 +552,7 @@ var M1 = declare( null, {
       },
     });
 
-    var A = declare( null, {
+    var A = declare( Object, {
       name: 'A',
       method1: function( parameter ){
         console.log( "A::method1() called, parameter: ", parameter );
@@ -610,7 +610,7 @@ This is a function that is attached to each constructor returned. This allows yo
 When declaring a constructor, you can pass a `constructor` parameter with initialisation code:
 
 ````Javascript
-    var A = declare( null, {
+    var A = declare( Object, {
       constructor: function(){
         this.something = 10;
       }
