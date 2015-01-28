@@ -391,13 +391,13 @@ You can easily inherit from multiple constructors:
   A1::method1() called, parameter:  10
   */
 
-  console.log( aa instanceof A1 ); // => false
-  console.log( aa instanceof A2 ); // => false
-  console.log( aa instanceof A3 ); // => false
+  console.log( aa1 instanceof A1 ); // => false
+  console.log( aa1 instanceof A2 ); // => false
+  console.log( aa1 instanceof A3 ); // => false
 
-  console.log( aa.instanceOf( A1 ) ); // => true
-  console.log( aa.instanceOf( A2 ) ); // => true
-  console.log( aa.instanceOf( A3 ) ); // => true
+  console.log( aa1.instanceOf( A1 ) ); // => true
+  console.log( aa1.instanceOf( A2 ) ); // => true
+  console.log( aa1.instanceOf( A3 ) ); // => true
 ````
 
 You can achieve multiple inheritance either by passing an array as first argument and the prototype as second argument( `var AA1 = declare( [ A1, A2, A3 ], { ... } );`) or by passing a list of constructors, with the prototype as the last parameter (`var AA2 = declare( A1, A2, A3, { ... } );`). The two forms are completely equivalent. The type of the last parameter passed to `declare()` is checked: if it's a function, it will be treated as a constructor to inherit from; if it's a simple non-null object, it will be treated as the prototype. This means that these two forms are totally equivalent:
