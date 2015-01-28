@@ -364,19 +364,28 @@ You can easily inherit from multiple constructors:
       },
     });
 
-   var AA = declare( [ A1, A2, A3 ], {
-      name: 'AA',
+   var AA1 = declare( [ A1, A2, A3 ], {
+      name: 'AA1',
       method1: function( parameter ){
-        console.log( "AA::method1() called, parameter: ", parameter );
+        console.log( "AA1::method1() called, parameter: ", parameter );
         this.inherited(arguments);
-        return "Returned by AA::method1";
+        return "Returned by AA1::method1";
       },
    })
 
-  var aa = new AA();
-  aa.method1( 10 );
+   var AA2 = declare( A1, A2, A3, {
+      name: 'AA2',
+      method1: function( parameter ){
+        console.log( "AA2::method1() called, parameter: ", parameter );
+        this.inherited(arguments);
+        return "Returned by AA2::method1";
+      },
+   })
+
+  var aa1 = new AA1();
+  aa1.method1( 10 );
   /* =>
-  AA::method1() called, parameter:  10
+  AA1::method1() called, parameter:  10
   A3::method1() called, parameter:  10
   A2::method1() called, parameter:  10
   A1::method1() called, parameter:  10
@@ -390,6 +399,16 @@ You can easily inherit from multiple constructors:
   console.log( aa.instanceOf( A2 ) ); // => true
   console.log( aa.instanceOf( A3 ) ); // => true
 ````
+
+You can achieve multiple inheritance either by passing an array as first argument and the prototype as second argument( `var AA1 = declare( [ A1, A2, A3 ], { ... } );`) or by passing a list of constructors, with the prototype as the last parameter (`var AA2 = declare( A1, A2, A3, { ... } );`). The two forms are completely equivalent. The type of the last parameter passed to `declare()` is checked: if it's a function, it will be treated as a constructor to inherit from; if it's a simple non-null object, it will be treated as the prototype. This means that these two forms are totally equivalent:
+
+   var AA1 = declare( [ A1, A2, A3 ], { ... } );
+   var AA2 = declare( A1, A2, A3, { ... } );
+
+Note also that the second parameter is optional. So, you can do:
+
+   var AA1 = declare( [ A1, A2, A3 ] );
+   var AA2 = declare( A1, A2, A3 );
 
 Note that when you use multiple inheritance (that is, when the first parameter passed to declare is an array, and the array has more than 1 element), the resulting constructor `AA` won't have `A1`, `A2` and `A3` in its prototype chain, but _copies_ of them. This means that Javascript's native `instanceof` will not work -- you will have to use the object's `instanceOf()` method instead.
 
@@ -592,6 +611,16 @@ var M1 = declare( Object, {
 ````
 
 Note that `B` will be based on an object that can be seen as `A` plus `M1` plus `M2`.
+Also, just like in `extend()`, the following forms are totally equivalent:
+
+    var B = A.extend( [ M1, M2 ], { ... } );
+    var B = A.extend( M1, M2, { ... } );
+
+Just like in `declare()`, you can also omit the prototype:
+
+    var B = A.extend( [ M1, M2 ] );
+    var B = A.extend( M1, M2 );
+
 
 # (Not much) Under the hood
 
@@ -605,33 +634,13 @@ Each constructor has the following attributes:
 
 This is a function that is attached to each constructor returned. This allows you to create a new constructor "extending" an existing one.
 
-#### `ActualConstructor`
-
-When declaring a constructor, you can pass a `constructor` parameter with initialisation code:
-
-````Javascript
-    var A = declare( Object, {
-      constructor: function(){
-        this.something = 10;
-      }
-    })
-    console.log( A.ActualConstructor.toString() );
-    /* =>
-    function (){
-      this.something = 10;
-    }
-    */
-````
-
-So, `A.ActualConstructor` will point to the function passed in `constructor`. When running `a = new A()` you are actually running a stock function that, when run directly to construct an object (like in this case), will run all constructors in the prototype chain, starting from the innermost one and moving all the way out. To understand more how this mechansm works, look at the `ReturnedCtor` function in the module's code.
-
 #### `OriginalConstructor`
 
-When using SimpleDeclare's multiple inheritance features, each constructor is actually cloned and placed in a ad-hoc prototype chain that depends on the second parameter of `declare()`. Each cloned constructor will have an OriginalConstructor attribute. This attrbute is basically never exposed directly (since developers never need direct access to those constructors). However, it's necessary for SimpleDeclare so that 1) Duplication in the prototype chain is avoided properly 2) The `instanceOf()` method can work properly (see below).
+When using SimpleDeclare's multiple inheritance features, each constructor is actually cloned and placed in a ad-hoc prototype chain that depends on the second parameter of `declare()`. Each cloned constructor will have an `OriginalConstructor` attribute. This attrbute is basically never used directly (since developers never need direct access to those constructors). However, it's necessary for SimpleDeclare so that 1) Duplication in the prototype chain is avoided properly 2) The `instanceOf()` method can work properly (see below).
 
 ### Attributes to returned constructors' prototype (available to objects)
 
-When creating a constructor, a numbe of parameters are made available to the prototpe _if they weren't already available_ (so, unnecessary pollution is avoided).
+When creating a constructor, a number of parameters are made available to the prototpe _if they weren't already available_ (so, unnecessary pollution is avoided).
 
 Here they are.
 

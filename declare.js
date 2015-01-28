@@ -82,37 +82,14 @@
 
         // This will be added as a Constructor-wide method
         // of constructor created with simpleDeclare (only if needed)
-        var extend = function( SuperCtor, protoMixin ){
+        var extend = function(){
 
-          // Only one argument was passed: it's either this form:
-          //   * EITHER B = A.extend( { p1: 10, p2: 20 } ) -- only the protoMixin was passed
-          //   * OR B = A.extend( C ) -- B will inherit from the mixin of [ A, C ]
-          //   * OR B = A.extend( [ C, D, E ] ) -- B will inherit from the mixin of [ A, C, D, E ] 
-          if( arguments.length === 1 ){
+          // Normalise the arguments passed
+          var r = workoutDeclareArguments( arguments );
+          r.SuperCtorList.unshift( this );
 
-            // If SuperCtor is a normal object, then it was called in the format
-            // B = A.extend( { p1: 10, p2:20 } ); Just call declare with [ this ] and only
-            // constructor parameter. This is the most common case.
-            if( typeof( SuperCtor ) === 'object' && SuperCtor !== null ) return declare( [ this ], SuperCtor );
-
-            // If SuperCtor is not a normal object, then protoMixin is assumed to be empty
-            else protoMixin = {};
-          }
-          
-          // SuperCtor is is either a constructor function, or an array of constructor functions.
-          // Make up finalSuperCtorArray according to it.
-          // NOTE that if it's not neither of them, then an error is thrown as the first parameter
-          // was obviously meaningless
-          var finalSuperCtorArray = [ this ];  
-          if( Array.isArray( SuperCtor ) ){  
-            for( var i = 0, l = SuperCtor.length; i < l; i ++ ) finalSuperCtorArray.push( SuperCtor[ i ] ); 
-          } else if( typeof( SuperCtor ) === 'function' ) {
-            finalSuperCtorArray.push( SuperCtor );
-          } else {
-            throw new Error( "SuperCtor parameter illegal in declare (via extend)");
-          }
-
-          return declare( finalSuperCtorArray, protoMixin );
+          // Will run declare with the 2-parameter signature
+          return declare( r.SuperCtorList, r.protoMixin );
         };
 
 
@@ -147,7 +124,7 @@
             // The object's main constructor is being run. It will be responsible of
             // running all of the constructors in the prototype chain, starting from
             // the innermost and moving all the way out, except the last one
-            // (which it itself) 
+            // (which is itself) 
             if( Object.getPrototypeOf( this ).constructor === ReturnedCtor ){
 
               // Goes through the prototype chain and execute every single constructor.
@@ -174,7 +151,6 @@
           // Create the new function's prototype. It's a new object, which happens to
           // have its own prototype (__proto__) set as the superclass' prototype and the
           // `constructor` attribute set as FromCtor (the one we are about to return)
-
           ReturnedCtor.prototype = Object.create(FromCtor.prototype, {
             constructor: {
               value: ReturnedCtor,
@@ -273,37 +249,97 @@
           return found;    
         };
 
-        var declare = function( SuperCtorList, protoMixin ){
+        // Normalise arguments passed to declare(): the end result will always be
+        // an object with two values:
+        //  * SuperCtorList - an array of constructors
+        //  * protoMixin - an object with prototype attributes
+        // This implies that you can actually throw basically anything that makes sense
+        // to declare: declare(), declare( A ), declare( )
+        var workoutDeclareArguments = function( args ){
+
+          var r = {};
+          var arg;
+
+          // No arguments at all: inheriting straight from Object, nothing in the prototype
+          if( args.length === 0 ) return { SuperCtorList: [], protoMixin: {} };
+
+          // One argument: it could be:
+          //   * An array of constructors
+          //   * A protoMixin
+          //   * A single constructor
+          //  Act accordingly
+          if( args.length === 1 ){
+
+            var arg = args[ 0 ];
+            // It's an array of constructors
+            if( Array.isArray( arg ) )
+              return { SuperCtorList: arg, protoMixin: {} };
+            // It's a protoMixin
+            else if( typeof arg === 'object' && arg !== null )
+              return { SuperCtorList: [], protoMixin: arg };
+            // It's a constructor
+            else if( typeof arg === 'function' )
+              return { SuperCtorList: [ arg ], protoMixin: {} }; 
+            else 
+              throw new Error( "Invalid lone argument to declare(), needs to be array, function or pure object" );
+          }
+
+          // Two arguments. Only check if the first one is an array. If it is, then it's the list of
+          // constructors, with second argument POSSIBLY being protoMixin
+          if( args.length === 2 ){
+            var a = args[ 0 ];
+            var b = args[ 1 ];
+
+            // First parameter is an array: that's the list of ctors
+            if( Array.isArray( a ) ){
+              // Normalise b
+              if( typeof b !== 'object' || b === null ) b = {};
+              return { SuperCtorList: a, protoMixin: b };
+            }
+          }
+
+          // CHECK POINT: at this point, there are 2 or more arguments, and the "array as first proto" is
+          // out of the picture. So, will go through args and make up the array based on it
+          var lastIndex = args.length - 1;
+          var list = [];
+          // This cycle will deal with all items except the last one, which might be either a
+          // constructor or a protoMixin
+          for( var i = 0; i < lastIndex; i ++ ){
+            var item = args[ i ];
+
+            // Check that it's the right type, allowing for the last one to be an exception
+            if( typeof item !== 'function' )
+              throw new Error("Parameters to declare() must be constructor functions (except the last one which can be an object for the prototype)")
+            list.push( item );
+          }
+
+          // The last one might be either a constructor function, or a protoMixin.
+          // Deal with either case
+          var lastOne = args[ lastIndex ];
+          if( typeof lastOne === 'function' ){
+            list.push( lastOne );     
+            return { SuperCtorList: list, protoMixin: {} };
+          } else if( typeof lastOne === 'object' && lastOne !== null ) {
+            return { SuperCtorList: list, protoMixin: lastOne };
+          } else throw new Error("Last argument of declare() must be either a function or a mixin object");
+        }
+
+        // Parameters are very variable
+        var declare = function(){
+
+          // These will be worked out from `arguments`
+          var SuperCtorList, protoMixin;
 
           var MixedClass, ResultClass;
           var list = [];
           var i, l, ii, ll;
           var proto;
-          
-          // No arguments at all: inheriting straight from Object, no extra parameters
-          if( arguments.length === 0 ){
-            console.log("A");
-            superCtorList = Object;
-            protoMixin = {}
-          }
 
-          // If only one parameter was passed, and it was an object, it's assumed to be
-          // in the form `B = declare( { p1: 10, p2: 20 } )`, inheriting straight from Object
-          if( arguments.length === 1  && typeof( SuperCtorList ) === 'object' && SuperCtorList !== null ){
-            console.log("B", arguments );;
-            protoMixin = SuperCtorList;
-            SuperCtorList = Object;
-          }
-     
 
-          // Check that SuperCtorList is either a constructor function or an array (of constructor functions)
-          if( typeof( SuperCtorList ) !== 'function' && !Array.isArray( SuperCtorList ) ){
-            throw new Error( "SuperCtor parameter illegal in declare: must be a function or an array");
-          }
+          var r = workoutDeclareArguments( arguments );
+          SuperCtorList = r.SuperCtorList;
+          protoMixin = r.protoMixin;
 
-          // Normalise SuperCtor into a 1-element array if it was a function
-          if( typeof( SuperCtorList ) === 'function' ) SuperCtorList = [ SuperCtorList ];
-          
           // No parameters: inheriting from Object directly, no multiple inheritance
           if( SuperCtorList.length === 0 ){
             MixedClass = Object;
@@ -319,7 +355,6 @@
           } else {
             MixedClass = Object;
 
-            console.log("C ", SuperCtorList );
             // NOW:
             // Go through every __proto__ of every derivative class, and augment
             // MixedClass by inheriting from A COPY OF each one of them.

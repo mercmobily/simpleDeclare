@@ -30,7 +30,7 @@ function getProtoChain( p ){
     if( p.constructor === Object ){
       list.push( "BASE" );
     } else {
-      list.push( p.name );
+      list.push( p.hasOwnProperty( 'name' ) ? p.name : "UNDEF" );
     }
   }
   return list.reverse();
@@ -467,6 +467,90 @@ var tests = {
 
     test.done();
   },
+
+  "declare parameters": function( test ){
+
+    var A1 = declare( Object, { name: 'A1' });
+    var A2 = declare( Object, { name: 'A2' });
+    var A3 = declare( Object, { name: 'A3' });
+    var T1 = declare(); // No parameters
+    var T2 = declare( { name: 'T2' } );// One param, an object
+    var T3 = declare( A1 ); // One param, a constructor
+    var T4 = declare( [ A1, A2, A3 ] ); // One param, an array 
+    var T5 = declare( [ A1, A2 ], { name: 'T5' } ); // Two params, array + object
+    var T6 = declare( A1, { name: 'T6' } ); // Two params, function + object
+    var T7 = declare( A1, A2, { name: 'T7' } ); // Three params, constructors + mixin
+    var T8 = declare( A1, A2, A3 ); // Three params, constructors only
+   
+    var t1 = new T1();
+    var t2 = new T2();
+    var t3 = new T3();
+    var t4 = new T4();
+    var t5 = new T5();
+    var t6 = new T6();
+    var t7 = new T7();
+    var t8 = new T8();
+
+    test.ok( compareProtoChain( t1, [ 'BASE', 'UNDEF' ] ) );
+    test.ok( compareProtoChain( t2, [ 'BASE', 'T2' ] ) );
+    test.ok( compareProtoChain( t3, [ 'BASE', 'A1', 'UNDEF' ] ) );
+    test.ok( compareProtoChain( t4, [ 'BASE', 'A1', 'A2', 'A3', 'UNDEF' ] ) );
+    test.ok( compareProtoChain( t5, [ 'BASE', 'A1', 'A2', 'T5' ] ) );
+    test.ok( compareProtoChain( t6, [ 'BASE', 'A1', 'T6' ] ) );
+    test.ok( compareProtoChain( t7, [ 'BASE', 'A1', 'A2', 'T7' ] ) );
+    test.ok( compareProtoChain( t8, [ 'BASE', 'A1', 'A2', 'A3', 'UNDEF' ] ) );
+    
+    test.done()
+  },
+
+
+  "extend parameters": function( test ){
+
+    var A1 = declare( Object, { name: 'A1' });
+    var A2 = declare( Object, { name: 'A2' });
+    var A3 = declare( Object, { name: 'A3' });
+    var A4 = declare( Object, { name: 'A4' });
+
+    var T1 = A1.extend(); // No parameters
+    var T2 = A1.extend( { name: 'T2' } );// One param, an object
+    var T3 = A1.extend( A2 ); // One param, a constructor
+    var T4 = A1.extend( [ A2, A3 ] ); // One param, an array 
+    var T5 = A1.extend( [ A2, A3 ], { name: 'T5' } ); // Two params, array + object
+    var T6 = A1.extend( A2, { name: 'T6' } ); // Two params, function + object
+    var T7 = A1.extend( A2, A3, { name: 'T7' } ); // Three params, constructors + mixin
+    var T8 = A1.extend( A2, A3, A4 ); // Three params, constructors only
+   
+    var t1 = new T1();
+    var t2 = new T2();
+    var t3 = new T3();
+    var t4 = new T4();
+    var t5 = new T5();
+    var t6 = new T6();
+    var t7 = new T7();
+    var t8 = new T8();
+
+    test.ok( compareProtoChain( t1, [ 'BASE', 'A1', 'UNDEF' ] ) );
+    test.ok( compareProtoChain( t2, [ 'BASE', 'A1', 'T2' ] ) );
+    test.ok( compareProtoChain( t3, [ 'BASE', 'A1', 'A2', 'UNDEF' ] ) );
+    test.ok( compareProtoChain( t4, [ 'BASE', 'A1', 'A2', 'A3', 'UNDEF' ] ) );
+    test.ok( compareProtoChain( t5, [ 'BASE', 'A1', 'A2', 'A3', 'T5' ] ) );
+    test.ok( compareProtoChain( t6, [ 'BASE', 'A1', 'A2', 'T6' ] ) );
+    test.ok( compareProtoChain( t7, [ 'BASE', 'A1', 'A2', 'A3', 'T7' ] ) );
+    test.ok( compareProtoChain( t8, [ 'BASE', 'A1', 'A2', 'A3', 'A4', 'UNDEF' ] ) );
+    
+    test.ok( t1 instanceof A1 );
+    test.ok( t2 instanceof A1 );
+    test.ok( ! ( t3 instanceof A1 ) );
+    test.ok( ! ( t3 instanceof A2 ) );
+    test.ok( ! ( t4 instanceof A1 ) );
+    test.ok( ! ( t5 instanceof A1 ) );
+    test.ok( ! ( t6 instanceof A1 ) );
+    test.ok( ! ( t7 instanceof A1 ) );
+    test.ok( ! ( t8 instanceof A1 ) );
+
+    test.done()
+  },
+
 
   "multiple inheritance -- repeated constructors": function( test ){
 
