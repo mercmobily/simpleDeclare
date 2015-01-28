@@ -34,7 +34,8 @@
             currentPoint = Object.getPrototypeOf( currentPoint );
           }
 
-          // If nothing was found, return null
+          // Return crrentPoint. Note that if the search was unsccessful,
+          // currentPoint will be `null`
           return { base: currentPoint, key: k };
         }
 
@@ -81,28 +82,14 @@
 
         // This will be added as a Constructor-wide method
         // of constructor created with simpleDeclare (only if needed)
-        var extend = function( SuperCtor, protoMixin ){
+        var extend = function(){
 
-          // Only one argument was passed and it's an object: it's protoMixin.
-          // So, just return declare with `this` as base class and protoMixin
-          if( arguments.length === 1 ){
+          // Normalise the arguments passed
+          var r = workoutDeclareArguments( arguments );
+          r.SuperCtorList.unshift( this );
 
-            if( typeof( SuperCtor ) === 'object' && SuperCtor !== null ) return declare( [ this ], SuperCtor );
-            else protoMixin = {};
-          }
-          
-          // SuperCtor is is either a constructor function, or an array of constructor functions
-          // Make up finalSuperCtorArray according to it.
-          var finalSuperCtorArray = [ this ];  
-          if( Array.isArray( SuperCtor ) ){  
-            for( var i = 0, l = SuperCtor.length; i < l; i ++ ) finalSuperCtorArray.push( SuperCtor[ i ] ); 
-          } else if( typeof( SuperCtor ) === 'function' ) {
-            finalSuperCtorArray.push( SuperCtor );
-          } else {
-            throw new Error( "SuperCtor parameter illegal in declare (via extend)");
-          }
-
-          return declare( finalSuperCtorArray, protoMixin );
+          // Will run declare with the 2-parameter signature
+          return declare( r.SuperCtorList, r.protoMixin );
         };
 
 
@@ -130,14 +117,14 @@
           
         var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
 
+          var ActualConstructor;
 
-          // Third implementation. The holy grail?
           var ReturnedCtor = function(){
 
             // The object's main constructor is being run. It will be responsible of
             // running all of the constructors in the prototype chain, starting from
             // the innermost and moving all the way out, except the last one
-            // (which it itself) 
+            // (which is itself) 
             if( Object.getPrototypeOf( this ).constructor === ReturnedCtor ){
 
               // Goes through the prototype chain and execute every single constructor.
@@ -151,32 +138,19 @@
               for( var i = l.length - 1; i >=1; i -- ){
                 l[ i ].apply( this, arguments );
               }
-              // Itself. Since I *know* this is a SimpleDeclare constructor,
-              // run ActualConstructor if available
-              var p = Object.getPrototypeOf( this );
-              if( p.constructor.hasOwnProperty( 'ActualConstructor' ) ){
-                p.constructor.ActualConstructor.apply( this, arguments );
-              }
-
-            // This is not the main object's constructor method -- plus, it's OBVIOUSLY
-            // a SimpleDeclare constructor. Simply run the ActualConstructor if available
-            } else {
-
-              if( ReturnedCtor.hasOwnProperty( 'ActualConstructor' ) ){
-                ReturnedCtor.ActualConstructor.apply( this, arguments );
-              }
-
             }
+
+            // Itself. Since I *know* this is a SimpleDeclare constructor,
+            // run ActualConstructor if available
+            if( ActualConstructor ) ActualConstructor.apply( this, arguments );
           };
           
-          if( protoMixin === null ) protoMixin = {};
-          if( typeof( protoMixin ) !== 'object' ) protoMixin = {};
+          // protoMixin MUST be a valid, not-null object
+          if( typeof( protoMixin ) !== 'object' || protoMixin === null) protoMixin = {};
           
           // Create the new function's prototype. It's a new object, which happens to
           // have its own prototype (__proto__) set as the superclass' prototype and the
           // `constructor` attribute set as FromCtor (the one we are about to return)
-
-
           ReturnedCtor.prototype = Object.create(FromCtor.prototype, {
             constructor: {
               value: ReturnedCtor,
@@ -206,7 +180,7 @@
           // a source of methods that just got added to the prototype).
           // ActualConstructor will be set to the `constructor` property of protoMixin
           if( ! SourceOfProto ){
-            if( protoMixin.hasOwnProperty( 'constructor' ) ) ReturnedCtor.ActualConstructor = protoMixin.constructor;
+            if( protoMixin.hasOwnProperty( 'constructor' ) ) ActualConstructor = protoMixin.constructor;
           }
 
           // We are in the process of cloning an existing constructor.
@@ -217,7 +191,7 @@
           //   This will ensure that we have a path to the actual constructor we actually cloned,
           //   so that instanceOf() will work (by checking ActualConstructor whenever possible)
           if( SourceOfProto ){
-            if( SourceOfProto.hasOwnProperty('ActualConstructor') ) ReturnedCtor.ActualConstructor = SourceOfProto.ActualConstructor;
+            ActualConstructor = SourceOfProto;
             ReturnedCtor.OriginalConstructor = SourceOfProto.OriginalConstructor || SourceOfProto;
           }
 
@@ -227,8 +201,12 @@
 
         var copyClassMethods = function( Source, Dest ){
 
-          // Copy class methods over
-          if( Source !== null && Source !== Object ){
+          // Source class needs to be a function
+          if( typeof( Source) !== 'function' ) throw new Error("Error: source constructor must be a function");
+
+          // Copy class methods over, EXCEPT if it's Object (the base class) which is ALWAYS
+          // gracefully ignored
+          if( Source !== Object ){
 
             var ownProps = Object.getOwnPropertyNames( Source );
             for( var i = 0, l = ownProps.length; i < l; i ++){
@@ -241,7 +219,7 @@
                 // It's one of the attributes' in Function()'s prototype: skip
                 if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) continue;
                 // It's one of the attributes managed by simpleDeclare: skip
-                if( [ 'ActualConstructor', 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) continue;
+                if( [ 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) continue;
                 Dest[ property ] = Source[ property ];
               }
             }
@@ -271,24 +249,98 @@
           return found;    
         };
 
-        var declare = function( SuperCtorList, protoMixin ){
+        // Normalise arguments passed to declare(): the end result will always be
+        // an object with two values:
+        //  * SuperCtorList - an array of constructors
+        //  * protoMixin - an object with prototype attributes
+        // This implies that you can actually throw basically anything that makes sense
+        // to declare: declare(), declare( A ), declare( )
+        var workoutDeclareArguments = function( args ){
+
+          var r = {};
+          var arg;
+
+          // No arguments at all: inheriting straight from Object, nothing in the prototype
+          if( args.length === 0 ) return { SuperCtorList: [], protoMixin: {} };
+
+          // One argument: it could be:
+          //   * An array of constructors
+          //   * A protoMixin
+          //   * A single constructor
+          //  Act accordingly
+          if( args.length === 1 ){
+
+            var arg = args[ 0 ];
+            // It's an array of constructors
+            if( Array.isArray( arg ) )
+              return { SuperCtorList: arg, protoMixin: {} };
+            // It's a protoMixin
+            else if( typeof arg === 'object' && arg !== null )
+              return { SuperCtorList: [], protoMixin: arg };
+            // It's a constructor
+            else if( typeof arg === 'function' )
+              return { SuperCtorList: [ arg ], protoMixin: {} }; 
+            else 
+              throw new Error( "Invalid lone argument to declare(), needs to be array, function or pure object" );
+          }
+
+          // Two arguments. Only check if the first one is an array. If it is, then it's the list of
+          // constructors, with second argument POSSIBLY being protoMixin
+          if( args.length === 2 ){
+            var a = args[ 0 ];
+            var b = args[ 1 ];
+
+            // First parameter is an array: that's the list of ctors
+            if( Array.isArray( a ) ){
+              // Normalise b
+              if( typeof b !== 'object' || b === null ) b = {};
+              return { SuperCtorList: a, protoMixin: b };
+            }
+          }
+
+          // CHECK POINT: at this point, there are 2 or more arguments, and the "array as first proto" is
+          // out of the picture. So, will go through args and make up the array based on it
+          var lastIndex = args.length - 1;
+          var list = [];
+          // This cycle will deal with all items except the last one, which might be either a
+          // constructor or a protoMixin
+          for( var i = 0; i < lastIndex; i ++ ){
+            var item = args[ i ];
+
+            // Check that it's the right type, allowing for the last one to be an exception
+            if( typeof item !== 'function' )
+              throw new Error("Parameters to declare() must be constructor functions (except the last one which can be an object for the prototype)")
+            list.push( item );
+          }
+
+          // The last one might be either a constructor function, or a protoMixin.
+          // Deal with either case
+          var lastOne = args[ lastIndex ];
+          if( typeof lastOne === 'function' ){
+            list.push( lastOne );     
+            return { SuperCtorList: list, protoMixin: {} };
+          } else if( typeof lastOne === 'object' && lastOne !== null ) {
+            return { SuperCtorList: list, protoMixin: lastOne };
+          } else throw new Error("Last argument of declare() must be either a function or a mixin object");
+        }
+
+        // Parameters are very variable
+        var declare = function(){
+
+          // These will be worked out from `arguments`
+          var SuperCtorList, protoMixin;
 
           var MixedClass, ResultClass;
           var list = [];
           var i, l, ii, ll;
           var proto;
-          
-          // Check that SuperCtorList is the right type
-          if( SuperCtorList !== null && typeof( SuperCtorList ) !== 'function' && !Array.isArray( SuperCtorList ) ){
-            throw new Error( "SuperCtor parameter illegal in declare");
-          }
 
-          // Normalise SuperCtor into an array
-          if( SuperCtorList === null ) SuperCtorList = [];
-          if( typeof( SuperCtorList ) === 'function' ) SuperCtorList = [ SuperCtorList ];
 
-          
-          // No parameters: inheriting from Object directly, no inheritance at all
+          var r = workoutDeclareArguments( arguments );
+          SuperCtorList = r.SuperCtorList;
+          protoMixin = r.protoMixin;
+
+          // No parameters: inheriting from Object directly, no multiple inheritance
           if( SuperCtorList.length === 0 ){
             MixedClass = Object;
           }
@@ -380,7 +432,7 @@
         };
 
         // Returned extra: declarableObject
-        declare.extendableObject = declare( null );
+        declare.extendableObject = declare( Object );
 
         exports = module.exports = declare;
       
