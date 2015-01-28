@@ -1,4 +1,4 @@
-"use NOstrict";
+"use strict";
 /*
 Copyright (C) 2013 Tony Mobily
 
@@ -20,13 +20,13 @@ process.on('uncaughtException', function(err) {
   console.error(err.stack);
 });
 
-function l( v ){
-  console.log( require( 'util' ).inspect( v, { depth: 10 } ) );
-}
+//function l( v ){
+//  console.log( require( 'util' ).inspect( v, { depth: 10 } ) );
+//}
 
 function getProtoChain( p ){
   var list = [];
-  while( p = p.__proto__){
+  while( ( p = Object.getPrototypeOf( p ) ) ){
     if( p.constructor === Object ){
       list.push( "BASE" );
     } else {
@@ -60,9 +60,12 @@ var tests = {
           return( "A2::method1() called, parameter: " + parameter );
         }
       })
-    }
+    };
 
     for( var k in toCheck ){
+
+      if( ! toCheck.hasOwnProperty( k ) ) continue;
+
       var C = toCheck[ k ];
 
       var o = new C();
@@ -76,9 +79,8 @@ var tests = {
       //test.notEqual( typeof C.ActualConstructor, 'function' );
 
       test.ok( o instanceof C );
-      test.equal( o.__proto__.__proto__.constructor, Object );
+      test.equal( Object.getPrototypeOf( Object.getPrototypeOf( o ) ).constructor, Object );
       test.equal( o.method1( 10 ),  k + "::method1() called, parameter: 10" );
-      debugger;
     }
     test.done();
 
@@ -99,12 +101,14 @@ var tests = {
           sentinel = parameter;
         }
       })
-    }
+    };
 
     for( var k in toCheck ){
-      var C = toCheck[ k ];
 
-      var o = new C( k );
+      if( ! toCheck.hasOwnProperty( k ) ) continue;
+
+      var C = toCheck[ k ];
+      new C( k );
 
       test.equal( sentinel, k );
       //test.equal( typeof C.ActualConstructor, 'function' )
@@ -130,7 +134,7 @@ var tests = {
       method2: function( parameter ){
         return "A::method2() called, parameter: " + parameter;
       },
-    })
+    });
 
     var B = declare( A, {
       name: 'B',
@@ -141,7 +145,7 @@ var tests = {
       method1: function( parameter ){
         return "B::method1() called, parameter: " + parameter;
       }
-    })
+    });
 
     var C = declare( B, { name: 'C' } );
     var D = declare( C, { name: 'D' } );
@@ -192,20 +196,20 @@ var tests = {
       method2: function( parameter ){
         return "A::method2() called, parameter: " + parameter;
       },
-    })
+    });
 
     var B = declare( A, {
       name: 'B',
       method1: function f( parameter ){
         return this.inherited( f, arguments ) + " " + "B::method1() called, parameter: " + parameter;
       }
-    })
+    });
     var C = declare( B, {
       name: 'C',
       method1: function f( parameter ){
         return this.inherited( f, arguments ) + " " + "C::method1() called, parameter: " + parameter;
       }
-    })
+    });
 
     var a = new A();
     var b = new B();
@@ -241,8 +245,8 @@ var tests = {
         this.inheritedAsync( f, arguments, function( err, result ){
           test.ifError( err );
 
-          cb( null, result + " " + "B::method1() called, parameter: " + parameter )
-        })
+          cb( null, result + " " + "B::method1() called, parameter: " + parameter );
+        });
       }
     });
     var C = declare( B, {
@@ -251,7 +255,7 @@ var tests = {
         this.inheritedAsync( f, arguments, function( err, result ){
           test.ifError( err );
 
-          cb( null, result + " " + "C::method1() called, parameter: " + parameter )          
+          cb( null, result + " " + "C::method1() called, parameter: " + parameter );
         });
       }
     });
@@ -296,7 +300,7 @@ var tests = {
 
   "inheriting from pure javascript constructors": function( test ){
 
-   var sentinel1 = 0, sentinel2 = 0, sentinel3 = 0;
+   var sentinel1 = 0;
 
    var A = declare( Object, {
 
@@ -308,17 +312,17 @@ var tests = {
       method2: function( parameter ){
         return "A::method2() called, parameter: " + parameter;
       },  
-      constructor: function( parameter ){
+      constructor: function(){
         sentinel1 ++;
       }
     });
     A.classMethod = function(){
       return "This is A's method";
-    }
+    };
 
     var B = function(){
       sentinel1 ++;
-    }
+    };
     B.prototype = Object.create( A.prototype, {
       constructor: {
         value: B,
@@ -334,20 +338,20 @@ var tests = {
 
       name: 'C',
 
-      constructor: function( parameter ){
+      constructor: function(){
         sentinel1 ++;
       },
       method1: function f( parameter ){
         return this.inherited( f, arguments ) + " " + "C::method1() called, parameter: " + parameter;
       },
 
-    })
+    });
 
-    var sentinel1 = 0;
-    var a = new A();
+    sentinel1 = 0;
+    new A();
     test.equal( sentinel1, 1 );
     
-    var sentinel1 = 0;
+    sentinel1 = 0;
     var c = new C();
     test.equal( sentinel1, 3 );
 
@@ -358,9 +362,6 @@ var tests = {
 
   "extend -- single inheritance": function( test ){
 
-    var sentinel1;
-    var sentinel2;
-
     var A = declare( Object, {
       name: 'A',
       method1: function( parameter ){
@@ -369,14 +370,14 @@ var tests = {
       method2: function( parameter ){
         return "A::method2() called, parameter: " + parameter;
       },
-    })
+    });
 
     var B = A.extend( {
       name: 'B',
       method1: function( parameter ){
         return "B::method1() called, parameter: " + parameter;
       }
-    })
+    });
 
     var C = B.extend( { name: 'C' } );
     var D = C.extend( { name: 'D' } );
@@ -435,16 +436,16 @@ var tests = {
         return ( this.inherited( f, arguments ) || '' ) + ' ' + "AA " + parameter;
       },
          
-    })
+    });
 
     var a1 = new A1();
-    test.equal( a1.method1( 10 ), ' A1 10')
+    test.equal( a1.method1( 10 ), ' A1 10');
 
     var a2 = new A2();
-    test.equal( a2.method1( 11 ), ' A2 11')
+    test.equal( a2.method1( 11 ), ' A2 11');
 
     var a3 = new A3();
-    test.equal( a3.method1( 12 ), ' A3 12')
+    test.equal( a3.method1( 12 ), ' A3 12');
 
     var aa = new AA();
     test.equal( aa.method1( 13 ), ' A1 13 A2 13 A3 13 AA 13' );
@@ -510,7 +511,7 @@ var tests = {
     test.ok( ! ( t7 instanceof A1 ) );
     test.ok( ! ( t8 instanceof A1 ) );
 
-    test.done()
+    test.done();
   },
 
 
@@ -558,7 +559,7 @@ var tests = {
     test.ok( ! ( t7 instanceof A1 ) );
     test.ok( ! ( t8 instanceof A1 ) );
 
-    test.done()
+    test.done();
   },
 
 
@@ -573,10 +574,10 @@ var tests = {
     var A = declare( [ A1, A2, A2, A3, A4, A5, A5, A1, A2 ], { name: 'A' } );
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A3', 'A4', 'A5', 'A' ] ) );
     
-    var A = declare( [ A1, A1, A1 ], { name: 'A' } );
+    A = declare( [ A1, A1, A1 ], { name: 'A' } );
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A' ] ) );
     
-    var A = declare( [ A1, A1, A1, A2, A1 ], { name: 'A' } );
+    A = declare( [ A1, A1, A1, A2, A1 ], { name: 'A' } );
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A' ] ) );
     
     var A12 = declare( [ A1, A2 ], { name: 'A12' } );
@@ -586,7 +587,7 @@ var tests = {
     test.ok( compareProtoChain( new A234(), [ 'BASE', 'A2', 'A3', 'A4', 'A234' ] ) );
 
     // A2 gets deleted from A234 as it was already added by A12
-    var A = declare( [ A12, A234 ], { name: 'A' });
+    A = declare( [ A12, A234 ], { name: 'A' });
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A12', 'A3', 'A4', 'A234', 'A' ] ) );
 
     // instanceOf works with multiple inheritance    
@@ -595,19 +596,19 @@ var tests = {
     test.ok( (new A()).instanceOf( A12 ) );
         
     // A12 doesn't add A2 because it was already added
-    var A = declare( [ A2, A12, A234 ], { name: 'A' });
+    A = declare( [ A2, A12, A234 ], { name: 'A' });
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A2', 'A1', 'A12', 'A3', 'A4', 'A234', 'A' ] ) );
     
     // A12 doesn't add A2, A234 doesn't add A4, as they were defined beforehand
-    var A = declare( [ A2, A4, A12, A234 ], { name: 'A' });
+    A = declare( [ A2, A4, A12, A234 ], { name: 'A' });
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A2', 'A4', 'A1', 'A12', 'A3', 'A234', 'A' ] ) );
     
     // Trailing constructors ignored as already added
-    var A = declare( [ A12, A234, A1, A4 ], { name: 'A' });
+    A = declare( [ A12, A234, A1, A4 ], { name: 'A' });
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A12', 'A3', 'A4', 'A234', 'A' ] ) );
     
     // Trailing constructors ignored as already added, plus a new trailing one
-    var A = declare( [ A12, A234, A1, A4, A5 ], { name: 'A' });
+    A = declare( [ A12, A234, A1, A4, A5 ], { name: 'A' });
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A12', 'A3', 'A4', 'A234', 'A5', 'A' ] ) );
     
     test.done();
@@ -618,7 +619,6 @@ var tests = {
     var A1 = declare( Object, { name: 'A1' } );
     var A2 = declare( Object, { name: 'A2' } );
     var A3 = declare( Object, { name: 'A3' } );
-    var A4 = declare( Object, { name: 'A4' } );
     
     var A = A1.extend( [ A2, A3 ], { name: 'A' });
     test.ok( compareProtoChain( new A(), [ 'BASE', 'A1', 'A2', 'A3', 'A' ] ) );
@@ -630,6 +630,7 @@ var tests = {
   
 // Copy tests over to exports
 for( var i in tests ){
+  if( ! tests.hasOwnProperty( i ) ) continue;
   exports[ i ] = tests[ i ];
 }
 

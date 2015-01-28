@@ -11,7 +11,7 @@
     (function ( define ){
 
       "use strict";
-
+      /*jslint node: true */
 
       define( function( require, exports, module ){
 
