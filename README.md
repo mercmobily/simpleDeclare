@@ -40,13 +40,27 @@ SimpleDeclare is the Holy Grail of OOP implementation in Javascript, working _wi
     console.log( A.extend ); // => [Function]
 ````
 
-This is the simplest way to create a constructor function: the first parameter, `null`, tells SimpleDeclare that you are inheriting from `Object()`. The second parameter contains the methods that will be added to the constructor's prototype.
+This is the simplest way to create a constructor function: the first parameter, `Object`, tells SimpleDeclare that you are inheriting from `Object` (Javascript's basic class). The second parameter contains the methods that will be added to the constructor's prototype.
 You can see that `A`'s prototype also contains extra methods: 
 
 * `inherited()` and `inheritedAsync()` (which will call `method1()` of the parent);
 * `instanceOf()` (which checks if an object is the instance of a constructor, even when using multiple inheritance -- more about this later);
 * `getInherited()` (returns the corresponding function in the parent).
 
+## Shorthand syntax when deriving from `Object`
+
+When deriving from `Object`, you can just pass the mixin to simpleDeclare, omitting `Object` as the first parameter: 
+
+````Javascript
+    var A = declare( {
+      method1: function( parameter ){
+        console.log("A::method1() called!")
+      },
+    })
+
+    var a = new A();
+````
+In the documentation, for clarity's sake, I will use the full syntax `var A = declare( Object, { ... } );`. However, in real programs you will probably want to use the shorthand version `var A = declare( { ... } );`. The result of the two calls is identical.
 
 # Simple inheritance from Object with initialisation function
 
@@ -621,6 +635,32 @@ Just like in `declare()`, you can also omit the prototype:
     var B = A.extend( [ M1, M2 ] );
     var B = A.extend( M1, M2 );
 
+# Syntax summary
+
+As you can see, simpleDeclare is very resiliant in terms of what parameters can be passed to it.
+Here is a summary of all possible forms:
+
+## `declare()`
+
+  * `var T1 = declare();`: Inherits from `Object`. Single inheritance.
+  * `var T2 = declare( { name: 'T2' } );`: Inherits from `Object`, prototype has `name`. Single inheritance.
+  * `var T3 = declare( A1 );`: Inherits from `A1`, with empty prototype. Single inheritance.
+  * `var T4 = declare( [ A1, A2, A3 ] );`: Inherits from `A1, A2, A3`, with empty prototype. Multiple inheritance.
+  * `var T5 = declare( [ A1, A2 ], { name: 'T5' } );`: Inherits from `A1, A2`, prototype has `name`. Multiple inheritance.
+  * `var T6 = declare( A1, { name: 'T6' } );`: Inherits from `A1`, prototype has `name`. Single inheritance.
+  * `var T7 = declare( A1, A2, { name: 'T7' } );`: Inherits from `A1, A2`, prototype has `name`. Multiple inheritance.
+  * `var T8 = declare( A1, A2, A3 );`: Inherits from `A1, A2, A3`, with empty prototype. Multiple inheritance.
+
+## `extend()`
+
+  * `var T1 = A1.extend();`: Inherits from `A1`, with empty prototype. Single inheritance.
+  * `var T2 = A1.extend( { name: 'T2' } );`: Inherits from `A1`, prototype has `name`. Single inheritance.
+  * `var T3 = A1.extend( A2 );`: Inherits from `A1, A2`, with empty prototype. Multiple inheritance.
+  * `var T4 = A1.extend( [ A2, A3 ] );`: Inherits from `A1, A2, A3`, with empty prototype. Multiple inheritance. 
+  * `var T5 = A1.extend( [ A2, A3 ], { name: 'T5' } );`: Inherits from `A1, A2, A3`, prototype has `name`. Multiple inheritance.
+  * `var T6 = A1.extend( A2, { name: 'T6' } );`: Inherits from `A1, A2`, prototype has `name`. Multiple inheritance.
+  * `var T7 = A1.extend( A2, A3, { name: 'T7' } );`: Inherits from `A1, A2, A3`, prototype has `name`. Multiple inheritance.
+  * `var T8 = A1.extend( A2, A3, A4 );`: Inherits from `A1, A2, A3, A4`, prototype has `name`. Multiple inheritance.
 
 # (Not much) Under the hood
 

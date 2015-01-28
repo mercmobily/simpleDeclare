@@ -499,7 +499,17 @@ var tests = {
     test.ok( compareProtoChain( t6, [ 'BASE', 'A1', 'T6' ] ) );
     test.ok( compareProtoChain( t7, [ 'BASE', 'A1', 'A2', 'T7' ] ) );
     test.ok( compareProtoChain( t8, [ 'BASE', 'A1', 'A2', 'A3', 'UNDEF' ] ) );
-    
+
+    test.ok( t1 instanceof Object );
+    test.ok( t2 instanceof Object );
+    test.ok( t3 instanceof Object );
+    test.ok( t3 instanceof A1 );
+    test.ok( ! ( t4 instanceof A1 ) );
+    test.ok( ! ( t5 instanceof A1 ) );
+    test.ok( t6 instanceof A1 );
+    test.ok( ! ( t7 instanceof A1 ) );
+    test.ok( ! ( t8 instanceof A1 ) );
+
     test.done()
   },
 
