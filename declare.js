@@ -1,4 +1,3 @@
-    "use strict";
     /*
     Copyright (C) 2015 Tony Mobily
 
@@ -10,6 +9,9 @@
     */
 
     (function ( define ){
+
+      "use strict";
+
 
       define( function( require, exports, module ){
 
@@ -257,7 +259,6 @@
         // to declare: declare(), declare( A ), declare( )
         var workoutDeclareArguments = function( args ){
 
-          var r = {};
           var arg;
 
           // No arguments at all: inheriting straight from Object, nothing in the prototype
@@ -270,7 +271,7 @@
           //  Act accordingly
           if( args.length === 1 ){
 
-            var arg = args[ 0 ];
+            arg = args[ 0 ];
             // It's an array of constructors
             if( Array.isArray( arg ) )
               return { SuperCtorList: arg, protoMixin: {} };
@@ -309,7 +310,7 @@
 
             // Check that it's the right type, allowing for the last one to be an exception
             if( typeof item !== 'function' )
-              throw new Error("Parameters to declare() must be constructor functions (except the last one which can be an object for the prototype)")
+              throw new Error("Parameters to declare() must be constructor functions (except the last one which can be an object for the prototype)");
             list.push( item );
           }
 
@@ -322,7 +323,7 @@
           } else if( typeof lastOne === 'object' && lastOne !== null ) {
             return { SuperCtorList: list, protoMixin: lastOne };
           } else throw new Error("Last argument of declare() must be either a function or a mixin object");
-        }
+        };
 
         // Parameters are very variable
         var declare = function(){
@@ -438,7 +439,7 @@
       
       });
     }(
-        typeof define == 'function' && define.amd
-            ? define
-            : function ( factory ) { factory( require, exports, module); }
+        typeof define == 'function' && define.amd ?
+            define :
+            function ( factory ) { factory( require, exports, module); }
     ));
