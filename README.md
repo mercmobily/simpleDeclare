@@ -402,13 +402,13 @@ You can easily inherit from multiple constructors:
 
 You can achieve multiple inheritance either by passing an array as first argument and the prototype as second argument( `var AA1 = declare( [ A1, A2, A3 ], { ... } );`) or by passing a list of constructors, with the prototype as the last parameter (`var AA2 = declare( A1, A2, A3, { ... } );`). The two forms are completely equivalent. The type of the last parameter passed to `declare()` is checked: if it's a function, it will be treated as a constructor to inherit from; if it's a simple non-null object, it will be treated as the prototype. This means that these two forms are totally equivalent:
 
-   var AA1 = declare( [ A1, A2, A3 ], { ... } );
-   var AA2 = declare( A1, A2, A3, { ... } );
+    var AA1 = declare( [ A1, A2, A3 ], { ... } );
+    var AA2 = declare( A1, A2, A3, { ... } );
 
 Note also that the second parameter is optional. So, you can do:
 
-   var AA1 = declare( [ A1, A2, A3 ] );
-   var AA2 = declare( A1, A2, A3 );
+    var AA1 = declare( [ A1, A2, A3 ] );
+    var AA2 = declare( A1, A2, A3 );
 
 Note that when you use multiple inheritance (that is, when the first parameter passed to declare is an array, and the array has more than 1 element), the resulting constructor `AA` won't have `A1`, `A2` and `A3` in its prototype chain, but _copies_ of them. This means that Javascript's native `instanceof` will not work -- you will have to use the object's `instanceOf()` method instead.
 
