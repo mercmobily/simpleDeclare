@@ -310,6 +310,7 @@
 
             // Check that it's the right type, allowing for the last one to be an exception
             if( typeof item !== 'function' )
+              //console.err( "ITEM: ", item );
               throw new Error("Parameters to declare() must be constructor functions (except the last one which can be an object for the prototype)");
             list.push( item );
           }
