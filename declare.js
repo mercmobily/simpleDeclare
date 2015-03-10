@@ -222,7 +222,7 @@
                 if( Function.prototype[ property ] === Source[ property ] || property === 'prototype' ) continue;
                 // It's one of the attributes managed by simpleDeclare: skip
                 if( [ 'extend', 'OriginalConstructor' ].indexOf( property ) !== -1 ) continue;
-                Dest[ property ] = Source[ property ];
+                if( property !== 'name') Dest[ property ] = Source[ property ];
               }
             }
           }
