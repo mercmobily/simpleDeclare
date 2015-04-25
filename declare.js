@@ -130,8 +130,6 @@
             if( Object.getPrototypeOf( this ).constructor === ReturnedCtor ){
 
               // Goes through the prototype chain and execute every single constructor.
-              // If the constructor has the ActualConstructor attribute, then it's a SimpleDeclare
-              // constructor 
               var l = [];
               var o = this;
               while( ( o = Object.getPrototypeOf( o ) ) ){
