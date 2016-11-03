@@ -19,7 +19,7 @@
 
           var found = false, currentPoint = o;
           var k, i, l;
-          
+
           while( currentPoint ){
 
             var objMethods = Object.getOwnPropertyNames( currentPoint );
@@ -44,7 +44,7 @@
         // This will become a method call, so `this` is the object
         var getInherited = function( fn ){
 
-          // Get the object's base 
+          // Get the object's base
           var objectBase = getObjectBase( this, fn );
 
           // If the function is not found anywhere in the prototype chain
@@ -54,7 +54,7 @@
           // At this point, I know the key. To look for the super method, I
           // only have to check if one of the parent __proto__ has a matching key `k`
           var p = Object.getPrototypeOf( objectBase.base );
-          return p[ objectBase.key ]; 
+          return p[ objectBase.key ];
         };
 
 
@@ -97,7 +97,7 @@
 
         // Look for Ctor.prototype anywhere in the __proto__ chain.
         // Unlike Javascript's plain instanceof, this method attempts
-        // to compare 
+        // to compare
         var instanceOf = function( Ctor ){
 
           var searchedProto = Ctor.OriginalConstructor ? Ctor.OriginalConstructor.prototype : Ctor.prototype;
@@ -116,7 +116,7 @@
           }
           return false;
         };
-          
+
         var makeConstructor = function( FromCtor, protoMixin, SourceOfProto ){
 
           var ActualConstructor;
@@ -126,7 +126,7 @@
             // The object's main constructor is being run. It will be responsible of
             // running all of the constructors in the prototype chain, starting from
             // the innermost and moving all the way out, except the last one
-            // (which is itself) 
+            // (which is itself)
             if( Object.getPrototypeOf( this ).constructor === ReturnedCtor ){
 
               // Goes through the prototype chain and execute every single constructor.
@@ -144,10 +144,10 @@
             // run ActualConstructor if available
             if( ActualConstructor ) ActualConstructor.apply( this, arguments );
           };
-          
+
           // protoMixin MUST be a valid, not-null object
           if( typeof( protoMixin ) !== 'object' || protoMixin === null) protoMixin = {};
-          
+
           // Create the new function's prototype. It's a new object, which happens to
           // have its own prototype (__proto__) set as the superclass' prototype and the
           // `constructor` attribute set as FromCtor (the one we are about to return)
@@ -173,7 +173,7 @@
           for( var i = 0, l = ownProps.length; i < l; i ++ ){
             var k = ownProps[ i ];
 
-            if( k !== 'constructor' ) ReturnedCtor.prototype[ k ] = protoMixin[ k ]; 
+            if( k !== 'constructor' ) ReturnedCtor.prototype[ k ] = protoMixin[ k ];
           }
 
           // We are not cloning a constructor, but creating a brand new one (using protoMixin as
@@ -246,7 +246,7 @@
             }
           }
 
-          return found;    
+          return found;
         };
 
         // Normalise arguments passed to declare(): the end result will always be
@@ -278,8 +278,8 @@
               return { SuperCtorList: [], protoMixin: arg };
             // It's a constructor
             else if( typeof arg === 'function' )
-              return { SuperCtorList: [ arg ], protoMixin: {} }; 
-            else 
+              return { SuperCtorList: [ arg ], protoMixin: {} };
+            else
               throw new Error( "Invalid lone argument to declare(), needs to be array, function or pure object" );
           }
 
@@ -317,7 +317,7 @@
           // Deal with either case
           var lastOne = args[ lastIndex ];
           if( typeof lastOne === 'function' ){
-            list.push( lastOne );     
+            list.push( lastOne );
             return { SuperCtorList: list, protoMixin: {} };
           } else if( typeof lastOne === 'object' && lastOne !== null ) {
             return { SuperCtorList: list, protoMixin: lastOne };
@@ -361,11 +361,15 @@
 
             list = [];
             for( i = 0, l = SuperCtorList.length; i < l; i ++ ){
-          
+
               // Get the prototype list, in the right order
               // (the reversed discovery order)
               // The result will be placed in `subList`
-              var subList = [];    
+              var subList = [];
+              if( typeof SuperCtorList[ i ] === 'undefined' || typeof SuperCtorList[ i ].prototype === 'undefined'){
+                throw new Error("Invalid constructor!")
+              }
+
               proto = SuperCtorList[ i ].prototype;
               while( proto ){
                 if( proto.constructor !== Object ) subList.push( proto );
@@ -388,7 +392,7 @@
 
               if( proto.constructor !== Object ){
 
-                MixedClass = makeConstructor( MixedClass, proto, proto.constructor );    
+                MixedClass = makeConstructor( MixedClass, proto, proto.constructor );
                 copyClassMethods( M, MixedClass ); // Methods previously inherited
 
                 copyClassMethods( proto.constructor, MixedClass ); // Extra methods from the father constructor
@@ -404,7 +408,7 @@
           // * A constructor with the appropriate prototype chain (multiple inheritance)
           ResultClass = makeConstructor( MixedClass, protoMixin );
           copyClassMethods( MixedClass, ResultClass );
-         
+
           // Add getInherited, inherited() and inheritedAsync() to the prototype
           // (only if they are not already there)
           if( ! ResultClass.prototype.getInherited ) {
@@ -413,12 +417,12 @@
           if( ! ResultClass.prototype.inherited ) {
             ResultClass.prototype.inherited = makeInheritedFunction( 'sync' );
           }
-          if( ! ResultClass.prototype.inheritedAsync ) {  
+          if( ! ResultClass.prototype.inheritedAsync ) {
             ResultClass.prototype.inheritedAsync = makeInheritedFunction( 'async' );
           }
 
           // Add instanceOf
-          if( ! ResultClass.prototype.instanceOf ) {    
+          if( ! ResultClass.prototype.instanceOf ) {
             ResultClass.prototype.instanceOf = instanceOf;
           }
 
@@ -435,7 +439,7 @@
         declare.extendableObject = declare( Object );
 
         exports = module.exports = declare;
-      
+
       });
     }(
         typeof define == 'function' && define.amd ?
